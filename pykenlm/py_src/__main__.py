@@ -6,7 +6,7 @@ import numpy as np
 from .lib import interpolate, util, builder, benchmark, constant as ct, kenlm, ngram, filter as filter_
 import sys
 from hashlib import sha256
-from .dataclass_ import (
+from .dataclass._dataclass import (
     LMPZParser, QueryParser, BenchmarkParser, NgramCounterParser,
     FilterParser, BinaryParser, InterpolateParser, StreamingParser
 )
