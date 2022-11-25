@@ -1,0 +1,13 @@
+[package]
+name = "kenlm-rs"
+version = "0.0.1"
+authors = ["Sandip Dey <sandip.dey1988@yahoo.com>"]
+edition = "2022"
+
+[dependencies]
+autocxx = "0.23.1"
+cxx = "1.0"
+
+[build-dependencies]
+autocxx-build = "0.23.1"
+miette = { version = "5", features = ["fancy"] } # optional but gives nicer error messages!

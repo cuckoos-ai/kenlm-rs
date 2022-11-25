@@ -1,2 +1,3 @@
-# vscode-cython
-VS Code extension for Cython Language
+# kenlm-rs
+
+Rust and Python binding for KenLM Language Model
