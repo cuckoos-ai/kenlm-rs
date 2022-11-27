@@ -1,5 +1,5 @@
 [package]
-name = "kenlm-rs"
+name = "kenlmrs"
 version = "0.0.1"
 authors = ["Sandip Dey <sandip.dey1988@yahoo.com>"]
 # edition = "2022"

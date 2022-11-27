@@ -1,135 +1,81 @@
-// cimport constant as ct
-// cimport template as tp
-// cimport util
+
+// use crate::kenlmrs::*;
+
+use std::collections::HashMap;
 
 
-// class Py_FilterConfig:
-// 	cdef Config filter_cnf
-// 	cdef size_t batch_size = 25000
-// 	cdef size_t threads
-// 	cdef bool phrase = False
-// 	cdef bool context = False
-// 	cdef ct.FilterMode mode
-// 	cdef FormatEnum format
+// fn RunThreadedFilter() -> Option() {
+//     if config.threads == 1  {
+// 		RunFilter(in_lm, filter_, output)
+// 	}
+//     else {
+// 		Threaded: Controller<Filter, OutputBuffer, Output>
 
-// 	def __cinit__(
-// 		self,
-// 		ct.Py_Format format_,
-// 		ct.Py_FilterMode mode,
-// 		size_t threads,
-// 		size_t batch_size,
-// 		bool phrase,
-// 		bool context
-// 	):
-// 		pass
+// 		let threading = Threaded(config.batch_size, config.threads * 2, config.threads, filter_, output)
 
-// 	def __dealloc__(self):
-// 		del self
+// 		RunFilter(in_lm, threading, output)
+//     }
+// }
 
-fn RunThreadedFilter() -> Option() {
+// fn RunContextFilter() -> Option() {
 
-}
+// }
 
-fn RunContextFilter() -> Option() {
+// fn DispatchBinaryFilter() -> Option() {
 
-}
-
-fn DispatchBinaryFilter() -> Option() {
-
-}
+// }
 
 
-// cdef void RunThreadedFilter(
-// 	Config & config,
-// 	util.FilePiece & in_lm,
-// 	tp.Filter & filter_,
-// 	tp.Output & output,
-// 	dtype=[Format, OutputBuffer]
-// ):
-// 	if config.threads == 1:
-// 		tp.Format.RunFilter(in_lm, filter_, output)
-// 	else:
-// 		ctypedef Controller[Filter, OutputBuffer, Output] Threaded
+// pub fn DispatchFilterModes(
+// 	config: &FilterConfig, in_vocab: IStream, in_lm: &FilePiece,
+// 	out_name: &str, format_type: Format
+// ) -> Result<()> {
+// 	// ctypedef unordered_map[string, vector[U_int]] Words
+    
+//     // substrings: Substrings
+//     // unordered_map[string, vector[uint64_t]] 
+//     let words: HashMap<String, Vec<u64>> = HashMap::new();
 
-// 		cdef Threaded threading = Threaded(config.batch_size, config.threads * 2,
-// 		                                   config.threads, filter_, output)
+// 	if config.mode == ct.FilterMode.MODE_MULTIPLE {
+// 		out = (out_name, ReadMultiple(in_vocab, substrings));
 
-// 		tp.Format.RunFilter(in_lm, threading, output)
-
-
-// cdef void RunContextFilter(
-// 	const Config & config,
-// 	util.FilePiece & in_lm,
-// 	tp.Filter filter_,
-// 	tp.Output & output,
-// 	dtype=[Format, OutputBuffer]
-// ):
-// 	if config.context:
-// 		ContextFilter[Filter]
-// 		context_filter = ContextFilter[Filter](filter_)
-// 		RunThreadedFilter(
-// 			config, in_lm, context_filter, output, dtype=dtype
-// 		)
-// 	else:
-// 		RunThreadedFilter(
-// 			config, in_lm, filter_, output, dtype=dtype
-// 		)
-
-// cpdef void DispatchBinaryFilter(
-// 	const Config & config,
-// 	util.FilePiece & in_lm,
-// 	const tp.Binary & binary,
-// 	tp.Output & out,
-// 	dtype=[Format, Binary]
-// ):
-// 	ctypedef BinaryFilter[Binary] Filter
-// 	RunContextFilter(config, in_lm, Filter(binary), out, dtype=[Format, BinaryOutputBuffer])
-
-// cpdef void DispatchFilterModes(
-// 	const Py_FilterConfig & config,
-// 	util.istream & in_vocab,
-// 	Py_FilePiece & in_lm,
-// 	const char *out_name,
-// 	ct.Format format_type=None
-// ):
-// 	# ctypedef unordered_map[string, vector[U_int]] Words
-// 	cdef:
-// 		Substrings substrings
-// 		unordered_map[string, vector[uint64_t]] words
-
-// 	if config.mode == ct.FilterMode.MODE_MULTIPLE:
-// 		out = (out_name, ReadMultiple(in_vocab, substrings))
-
-// 		if config.phrase:
+// 		if config.phrase {
 // 			RunContextFilter(
 // 				config, in_lm, PhraseFilter(substrings), out,
 // 			    dtype=[format_type, MultipleOutputBuffer]
-// 			)
-// 		else:
+// 			);
+//         }
+// 		else {
 // 			RunContextFilter(
 // 				config, in_lm, VocabFilter(words), out,
 // 			    dtype=[Format, MultipleOutputBuffer]
-// 			)
-
+// 			);
+//         }
+//     }
 // 	out(out_name)
 
-// 	if config.mode == FilterMode.MODE_COPY:
-// 		tp.Format.Copy(in_lm, out)
-// 		return
+// 	if config.mode == FilterMode.MODE_COPY {
+// 		tp.Format.Copy(in_lm, out);
+// 		return None;
+//     }
 
-// 	if config.mode == FilterMode.MODE_SINGLE:
-// 		cdef Words words
-// 		ReadSingle(in_vocab, words)
-// 		DispatchBinaryFilter[Format, Single](config, in_lm, Single(words), out)
-// 		return
-
-// 	if config.mode == FilterMode.MODE_UNION:
-// 		if config.phrase:
-// 			cdef Substrings substrings
-// 			ReadMultiple(in_vocab, substrings)
-// 			DispatchBinaryFilter[Format, Union](config, in_lm, Union(substrings), out)
-// 		else:
-// 			cdef Words words
-// 			ReadMultiple(in_vocab, words)
-// 			DispatchBinaryFilter[Format, Union](config, in_lm, Union(words), out)
-
+// 	if config.mode == FilterMode.MODE_SINGLE {
+// 		// Words words
+// 		ReadSingle(in_vocab, words);
+// 		DispatchBinaryFilter[Format, Single](config, in_lm, Single(words), out);
+// 		return Ok();
+//     }
+	
+//     if config.mode == FilterMode.MODE_UNION {
+// 		if config.phrase {
+// 			// substrings: Substrings
+// 			ReadMultiple(in_vocab, substrings);
+// 			DispatchBinaryFilter<Format, Union>(config, in_lm, Union(substrings), out);
+//         }
+// 		else {
+// 			// Words words
+// 			ReadMultiple(in_vocab, words);
+// 			DispatchBinaryFilter<Format, Union>(config, in_lm, Union(words), out);
+//         }
+//     }
+// }

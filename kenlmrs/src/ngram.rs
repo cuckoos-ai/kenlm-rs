@@ -118,21 +118,58 @@ trait Bhiksha {
 }
 
 #[derive(Debug)]
-pub(crate) struct ArrayBhiksha {
+pub struct ArrayBhiksha {
     kModelTypeAdd: ModelType,
 }
 
 #[derive(Debug)]
-pub(crate) struct DontBhiksha {
+pub struct DontBhiksha {
     kModelTypeAdd: ModelType,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct GenericModel<Search, VocabularyT> {
+pub struct GenericModel<Search, VocabularyT> {
     // This is the model type returned by RecognizeBinary.
     kModelType: ModelType,
     kVersion: i64,
 }
+
+// cpdef class ProbingModel(GenericModel__template):
+// 	def __cinit__(self, char *file_path, Config & init_config):
+// 		self.model_ = GenericModel[HashedSearch[BackoffValue], ProbingVocabulary](
+// 			file_path, init_config
+// 		)
+
+// cpdef class RestProbingModel(GenericModel__template):
+// 	def __cinit__(self, char *file_path, Config & init_config):
+// 		self.model_ = GenericModel[HashedSearch[RestValue], ProbingVocabulary](
+// 			file_path, init_config
+// 		)
+
+// cpdef class TrieModel(GenericModel__template):
+// 	def __cinit__(self, char *file_path, Config & init_config):
+// 		self.model_ = GenericModel[TrieSearch[DontQuantize, DontBhiksha], SortedVocabulary](
+// 			file_path, init_config
+// 		)
+
+// cpdef class ArrayTrieModel(GenericModel__template):
+// 	def __cinit__(self, char *file_path, Config & init_config):
+// 		self.model_ = GenericModel[HashedSearch[DontQuantize, ArrayBhiksha], SortedVocabulary](
+// 			file_path, init_config
+// 		)
+
+// cpdef class QuantTrieModel(GenericModel__template):
+// 	def __cinit__(self, char *file_path, Config & init_config):
+// 		self.model_ = GenericModel[HashedSearch[SeparatelyQuantize, DontBhiksha], SortedVocabulary](
+// 			file_path, init_config
+// 		)
+
+// cpdef class QuantArrayTrieModel(GenericModel__template):
+// 	def __cinit__(self, char *file_path, Config & init_config):
+// 		self.model_ = GenericModel[TrieSearch[SeparatelyQuantize, ArrayBhiksha], SortedVocabulary](
+// 			file_path, init_config
+// 		)
+
 
 #[derive(Debug)]
 pub struct LongestPointer;

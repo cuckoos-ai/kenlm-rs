@@ -3,7 +3,7 @@ from typing import List, Dict, Set
 import io
 import argparse
 import numpy as np
-from .lib import interpolate, util, builder, benchmark, constant as ct, kenlm, ngram, filter as filter_
+from pykenlm import interpolate, util, builder, benchmark, constant as ct, kenlm, ngram, filter as filter_
 import sys
 from hashlib import sha256
 from .dataclass._dataclass import (

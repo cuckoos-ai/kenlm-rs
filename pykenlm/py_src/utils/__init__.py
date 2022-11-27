@@ -1,3 +1,7 @@
+from typing import List, Iterator
+import numpy as np
+import io
+from pykenlm import ChainConfig, Chain, FilePiece as KLMFilePiece
 
 
 def GuessPhysicalMemory() -> int:
@@ -5,6 +9,7 @@ def GuessPhysicalMemory() -> int:
 
     :return _type_: _description_
     """
+
 
 def ParseSize(arg: str) -> int:
     """_summary_
@@ -41,92 +46,11 @@ class StringPiece:
         yield
 
 
-class ChainConfig:
-    chain_cfg_: 'ChainConfig'
-
-    def __init__(self, size_t in_entry_size_, size_t in_block_count, size_t in_total_memory):
-        self.chain_cfg_.entry_size = in_entry_size_
-        self.chain_cfg_.block_count = in_block_count
-        self.chain_cfg_.total_memory = in_total_memory
-
-    @property
-    def in_entry_size(self):
-        return self.chain_cfg_.entry_size
-    
-    @property
-    def in_block_count(self):
-        return self.chain_cfg_.block_count
-    
-    @property
-    def in_total_memory(self):
-        return self.chain_cfg_.total_memory
-
-class Chain:
-     Chain * __chainer
-
-    def __init__(self, ChainConfig config):
-        # TODO: FixMe - Do type conversion
-        self.__chainer = Chain(config.chain_cfg_)
-
-    def __dealloc__(self):
-        del self.__chainer
-
-    def __len__(self):
-        pass
-
-class FixedArrayMixin:
-    def begin(self):
-        pass
-    def end(self):
-        pass
-    def back(self):
-        pass
-    def size(self) -> int:
-        pass
-    def empty(self) -> bool:
-        pass
-    def __getitem__(self, i: int):
-        pass
-    def push_back(self):
-        pass
-    def pop_back(self):
-        pass
-    def clear(self):
-        pass
-
-class Chains(FixedArrayMixin):
-     Chains chains
-    def __init__(self):
-        pass
-    def __dealloc__(self):
-        del self.chains
-
-
-def class ChainPosition:
-     ChainPosition c_pos_
-
-    def __init__(self, **kwds):
-        self.c_pos_ = ChainPosition(kwds)
-    def __dealloc__(self):
-        del self.c_pos_
-
-    def Chain GetChain(self):
-        pass
-
-
-def class PySorts(FixedArrayMixin):
-     Sorts _sorted
-    def __init__(self, size_t number):
-        # Sorts[ContextOrder]
-        self._sorted = Sorts()
-    def __dealloc__(self):
-        del self._sorted
-
 class FilePiece:
-     FilePiece file_piece
-     size_t min_buffer
+    file_piece: KLMFilePiece
+    min_buffer: int
 
-    def __init__(self, io.FileIO fp, bool show_progress = False, size_t min_buffer = 1048576):
+    def __init__(self, fp: io.FileIO, show_progress: bool = False, min_buffer: int = 1048576):
         self.fp = fp
         self.show_progress = show_progress
         self.min_buffer = min_buffer
@@ -140,16 +64,16 @@ class FilePiece:
     def peek(self) -> str:
         pass
 
-    def ReadDelimited(self, bool[:] delim = np.zeros((256,), dtype=bool)) -> StringPiece:
+    def ReadDelimited(self, delim: List[bool] = np.zeros((256,), dtype=bool)) -> StringPiece:
         pass
 
-    def ReadWordSameLine(self, StringPiece to, bool[:] delim = np.zeros((256,), dtype=bool)) -> bool:
+    def ReadWordSameLine(self, to: StringPiece, delim: List[bool] = np.zeros((256,), dtype=bool)) -> bool:
         pass
 
-    def ReadLine(self, str delim = '\n', bool strip_cr = True) -> StringPiece:
+    def ReadLine(self, delim: str = '\n', strip_cr: bool = True) -> StringPiece:
         pass
 
-    def ReadLineOrEOF(self, StringPiece to, char delim = '\n', bool strip_cr = True) -> bool:
+    def ReadLineOrEOF(self, to: StringPiece, delim: str = '\n', strip_cr: bool = True) -> bool:
         pass
 
     def ReadFloat(self) -> np.float:
@@ -164,7 +88,7 @@ class FilePiece:
     def ReadULong(self) -> np.uint:
         pass
 
-    def SkipSpaces(self, bool[:] delim = np.zeros((256,), dtype=bool)) -> None:
+    def SkipSpaces(self, delim: List[bool] = np.zeros((256,), dtype=bool)) -> None:
         # Skip spaces defined by isspace.
         pass
 
@@ -178,26 +102,28 @@ class FilePiece:
         # Force a progress update.
         pass
 
-    def __dealloc__(self):
-        del self.file_piece
 
-def class RecyclingThreadPool:
-     :
-        size_t queue
-        size_t workers
-        Construct handler_construct
-        Request poison
+class RecyclingThreadPool:
+    queue: int
+    workers: int
+    handler_construct: Construct
+    poison: Request
 
-    def __init__(self, size_t queue, size_t workers, Construct handler_construct,
-                    Request poison, HandlerType HandlerT = None):
+    def __init__(
+        self,
+        queue: int, 
+        workers: int, 
+        handler_construct: Construct,
+        poison: Request, 
+        HandlerT: HandlerType  = None
+    ):
         self._pool = RecyclingThreadPool[HandlerT](queue, workers, handler_construct, poison)
-    def __dealloc__(self):
-        del self._pool
-    def PopulateRecycling(self, Request request):
+    
+    def PopulateRecycling(self, request: Request):
         self._pool.PopulateRecycling(request)
 
-    def Request Consume(self):
+    def Consume(self) -> Request:
         self._pool.Consume()
 
-    def Produce(self, const Request &request):
+    def Produce(self, request: Request):
         self._pool.Produce(request)
