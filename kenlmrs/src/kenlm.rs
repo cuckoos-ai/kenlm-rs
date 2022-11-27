@@ -86,7 +86,7 @@ pub struct Controller<Filter, OutputBuffer, RealOutput>;
 #[derive(Debug)]
 pub struct BinaryFilter<Binary>;
 
-trait OutputBuffer {}
+pub trait OutputBuffer {}
 #[derive(Debug, Clone, Copy)]
 pub struct BinaryOutputBuffer;
 
@@ -113,23 +113,22 @@ impl OutputBuffer for BinaryOutputBuffer {}
 
 impl OutputBuffer for MultipleOutputBuffer {}
 
-trait Buffer {
-    pub fn new(self) -> Self {}
+pub trait Buffer {
+    pub fn new() -> Self {}
 
     /// .
-    pub fn Reserve(self, size: i64);
+    pub fn Reserve(&self, size: i64);
 
     /// .
-    pub fn AddNGram(self, line: &StringPiece);
+    pub fn AddNGram(&self, line: &StringPiece);
 }
 
 impl Buffer for MultipleOutputBuffer {
-    fn single_add_ngram(self, offset: i64, line: &StringPiece) {}
-
-    fn new(self) -> Self {}
+    fn new() -> Self {}
+    fn single_add_ngram(&self, offset: i64, line: &StringPiece) {}
 }
 
-trait Format<Filter, Out> {
+pub trait Format<Filter, Out> {
     pub fn run_filter<Filter, Out>(self, in_fp: &FilePiece, filter_: &Filter, output: &Out);
 
     pub fn copy(self, in_fp: &FilePiece, out: &ARPAOutput);
@@ -140,17 +139,17 @@ impl Format for CountFormat {}
 impl Format for ARPAFormat {}
 
 impl Model {
-    pub fn BeginSentenceWrite(self);
+    pub fn BeginSentenceWrite(&self);
 
-    pub fn NullContextWrite(self);
+    pub fn NullContextWrite(&self);
 
-    pub fn Order(self) -> u64;
+    pub fn Order(&self) -> u64;
 
-    pub fn BaseVocabulary(self) -> Vocabulary;
+    pub fn BaseVocabulary(&self) -> Vocabulary;
 
-    pub fn BaseScore(self, in_state: T, new_word: WordIndex, out_state: T) -> f64;
+    pub fn BaseScore(&self, in_state: T, new_word: WordIndex, out_state: T) -> f64;
 
-    pub fn BaseFullScore(self, in_state: T, new_word: WordIndex, out_state: T) -> FullScoreReturn;
+    pub fn BaseFullScore(&self, in_state: T, new_word: WordIndex, out_state: T) -> FullScoreReturn;
 }
 
 impl ModelBuffer {
@@ -159,31 +158,31 @@ impl ModelBuffer {
     pub fn new(file_base: &StringPiece, keep_buffer: bool, output_q: bool) -> Self {}
 
     // Must call VocabFile and populate before calling this function.
-    pub fn sink(self, chains: &Chains, counts: Vec<u64>) -> Result<()>;
+    pub fn sink(&self, chains: &Chains, counts: Vec<u64>) -> Result<()>;
 
-    pub fn model_buffer(self, file_base: &StringPiece) -> Result<()>;
+    pub fn model_buffer(&self, file_base: &StringPiece) -> Result<()>;
 
     // # Read files and write to the given chains. If fewer chains are provided, only do the lower orders.
-    pub fn source(self, chains: &Chains) -> Option<()>;
+    pub fn source(&self, chains: &Chains) -> Option<()>;
 
-    pub fn source(self, order_minus_1: i8, chain: &Chain) -> Option<()>;
+    pub fn source(&self, order_minus_1: i8, chain: &Chain) -> Option<()>;
 
     // The order of the n-gram model that is associated with the model buffer.
-    fn order() -> i8;
+    fn order(&self) -> i8;
 
     // Requires Sink or load from file.
-    fn counts() -> Vec<u64>;
+    fn counts(&self) -> Vec<u64>;
 
-    fn vocab_file(self) -> i64;
+    fn vocab_file(&self) -> i64;
 
-    fn raw_file(self, order_minus_1: i8) -> i64;
+    fn raw_file(&self, order_minus_1: i8) -> i64;
 
     // fn SlowQuery(self, context: &State, word: &WordIndex, out: &State) -> Result<()>;
-    fn keep(self) -> bool;
+    fn keep(&self) -> bool;
 
     // Slowly execute a language model query with binary search.
     // This is used by interpolation to gather tuning probabilities rather than scanning the files.
-    fn slow_query(self, context: &State, word: &WordIndex, out: &State) -> f64;
+    fn slow_query(&self, context: &State, word: &WordIndex, out: &State) -> f64;
 }
 
 impl Vocabulary {
@@ -232,7 +231,7 @@ impl Default for FullScoreReturn {
     }
 }
 
-trait Model {
+pub trait Model {
     fn Recognize(&self, file: &str) -> Option<()> {}
 
     fn FullScore(&self, state: &State, word_index: &WordIndex, state: &State) -> FullScoreReturn {}
@@ -248,25 +247,25 @@ trait Model {
 }
 
 impl EnumerateVocab {
-    fn Add(self, index: WordIndex, string: &StringPiece) -> Result<()>;
+    fn Add(&self, index: WordIndex, string: &StringPiece) -> Result<()>;
 }
 
 impl BuildingPayload {
-    pub fn is_marked(self) -> bool;
+    pub fn is_marked(&self) -> bool;
 
-    pub fn mark(self);
+    pub fn mark(&self);
 
-    pub fn unmark(self);
+    pub fn unmark(&self);
 
-    pub fn unmarked_count(self) -> u64;
+    pub fn unmarked_count(&self) -> u64;
 
-    pub fn cutoff_count(self) -> u64;
+    pub fn cutoff_count(&self) -> u64;
 }
 
 impl NGram {
-    pub fn total_size(self, order: i64) -> i64;
+    pub fn total_size(&self, order: i64) -> i64;
 
-    pub fn order_from_size(self, size: i64) -> i64;
+    pub fn order_from_size(&self, size: i64) -> i64;
 }
 
 pub fn score_sentence(model: Model, sentence: &str) -> f64 {}

@@ -34,10 +34,10 @@ impl SplitWorker {
     // Constructs a split worker for a particular order. It writes the
     // split-off backoff values to the backoff chain and the ngram id and
     // probability to the sort chain for each ngram in the input.
-    fn new(self, order: i64, backoff_chain: &Chain, sort_chain: &Chain) -> Self {}
+    fn new(order: i64, backoff_chain: &Chain, sort_chain: &Chain) -> Self {}
 
     // The callback invoked to handle the input from the ngram intermediate files.
-    pub fn run(self, position: &ChainPosition) {}
+    pub fn run(&self, position: &ChainPosition) {}
 }
 
 pub fn tune_weights(

@@ -71,7 +71,7 @@ impl Union {
 
 impl Multiple {
     fn AddNGram(
-        self,
+        &self,
         begin: &Iterator,
         end: &Iterator,
         ngram: &StringPiece,

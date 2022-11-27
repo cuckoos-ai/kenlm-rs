@@ -79,15 +79,15 @@ impl FilePiece {
     // much faster. But sometimes you just have an istream like Boost's HTTP
     // server and want to parse it the same way. name is just used for messages and FileName().
 
-    pub fn begin(self) -> LineIterator;
-    pub fn end(self) -> LineIterator;
-    pub fn peek(self) -> &str;
+    pub fn begin(&self) -> LineIterator;
+    pub fn end(&self) -> LineIterator;
+    pub fn peek(&self) -> &str;
 
     // Leaves the delimiter, if any, to be returned by get().  Delimiters defined by isspace().
-    pub fn ReadDelimited(self, delim: bool) -> StringPiece;
+    pub fn ReadDelimited(&self, delim: bool) -> StringPiece;
 
     // Read word until the line or file ends.
-    pub fn ReadWordSameLine(self, to: &StringPiece, delim: bool) -> bool;
+    pub fn ReadWordSameLine(&self, to: &StringPiece, delim: bool) -> bool;
 
     // Read a line of text from the file.
     // Unlike ReadDelimited, this includes leading spaces and consumes the
@@ -98,7 +98,7 @@ impl FilePiece {
 
     // Throws EndOfFileException if the end of the file is encountered. If the
     // file does not end in a newline, this could mean that the last line is never read.
-    pub fn ReadLine(self, delim: &str, strip_cr: bool) -> StringPiece;
+    pub fn ReadLine(&self, delim: &str, strip_cr: bool) -> StringPiece;
 
     // Read a line of text from the file, or return false on EOF.
     // This is like ReadLine, except it returns false where ReadLine throws
@@ -106,19 +106,19 @@ impl FilePiece {
     // file if the file does not end in a newline.
     // If strip_cr is true, any trailing carriate return (as would be found on
     // a file written on Windows) will be left out of the returned line.
-    pub fn ReadLineOrEOF(self, to: &StringPiece, delim: bool, strip_cr: bool) -> bool;
-    pub fn ReadFloat(self) -> f64;
-    pub fn ReadDouble(self) ->f64;
-    pub fn ReadLong(self) -> i64;
-    pub fn ReadULong(self) -> u64;
+    pub fn ReadLineOrEOF(&self, to: &StringPiece, delim: bool, strip_cr: bool) -> bool;
+    pub fn ReadFloat(&self) -> f64;
+    pub fn ReadDouble(&self) ->f64;
+    pub fn ReadLong(&self) -> i64;
+    pub fn ReadULong(&self) -> u64;
 
     // Skip spaces defined by isspace.
-    pub fn SkipSpaces(self, delim: bool);
+    pub fn SkipSpaces(&self, delim: bool);
 
-    fn Offset(self) -> u64;
-    fn FileName(self) -> &str;
+    fn Offset(&self) -> u64;
+    fn FileName(&self) -> &str;
     // Force a progress update.
-    fn UpdateProgress(self);
+    fn UpdateProgress(&self);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -152,9 +152,9 @@ pub struct Combine;
 pub struct Sorts<FixedArray>;
 
 impl Sorts<FixedArray> {
-    pub fn Sorts(self, number: &i8);
+    pub fn Sorts(&self, number: &i8);
     pub fn push_back(
-        self, 
+        &self, 
         chain: &Chain, config: &SortConfig, 
         compare: &Compare, combine: &Combine
     );
@@ -165,14 +165,14 @@ pub struct Chain;
 
 impl Chain {
     pub fn new(config: &ChainConfig) -> Self;
-    pub fn EntrySize(self) -> i8;
-    pub fn SetProgressTarget(self, target: u64);
-    pub fn ActivateProgress(self);
-    pub fn BlockCount(self) -> i8;
-    pub fn Add(self) -> ChainPosition;
-    pub fn Wait(self, release_memory: bool);
-    pub fn Start(self);
-    pub fn Running(self) -> bool;
+    pub fn EntrySize(&self) -> i8;
+    pub fn SetProgressTarget(&self, target: u64);
+    pub fn ActivateProgress(&self);
+    pub fn BlockCount(&self) -> i8;
+    pub fn Add(&self) -> ChainPosition;
+    pub fn Wait(&self, release_memory: bool);
+    pub fn Start(&self);
+    pub fn Running(&self) -> bool;
 }
 
 #[derive(Debug)]

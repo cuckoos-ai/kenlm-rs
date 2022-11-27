@@ -134,42 +134,66 @@ pub struct GenericModel<Search, VocabularyT> {
     kVersion: i64,
 }
 
-// cpdef class ProbingModel(GenericModel__template):
-// 	def __cinit__(self, char *file_path, Config & init_config):
-// 		self.model_ = GenericModel[HashedSearch[BackoffValue], ProbingVocabulary](
-// 			file_path, init_config
-// 		)
 
-// cpdef class RestProbingModel(GenericModel__template):
-// 	def __cinit__(self, char *file_path, Config & init_config):
-// 		self.model_ = GenericModel[HashedSearch[RestValue], ProbingVocabulary](
-// 			file_path, init_config
-// 		)
+#[derive(Debug, Default)]
+pub struct ProbingModel;
 
-// cpdef class TrieModel(GenericModel__template):
-// 	def __cinit__(self, char *file_path, Config & init_config):
-// 		self.model_ = GenericModel[TrieSearch[DontQuantize, DontBhiksha], SortedVocabulary](
-// 			file_path, init_config
-// 		)
+#[derive(Debug, Default)]
+pub struct RestProbingModel;
 
-// cpdef class ArrayTrieModel(GenericModel__template):
-// 	def __cinit__(self, char *file_path, Config & init_config):
-// 		self.model_ = GenericModel[HashedSearch[DontQuantize, ArrayBhiksha], SortedVocabulary](
-// 			file_path, init_config
-// 		)
+#[derive(Debug, Default)]
+pub struct TrieModel;
 
-// cpdef class QuantTrieModel(GenericModel__template):
-// 	def __cinit__(self, char *file_path, Config & init_config):
-// 		self.model_ = GenericModel[HashedSearch[SeparatelyQuantize, DontBhiksha], SortedVocabulary](
-// 			file_path, init_config
-// 		)
+#[derive(Debug, Default)]
+pub struct ArrayTrieModel;
 
-// cpdef class QuantArrayTrieModel(GenericModel__template):
-// 	def __cinit__(self, char *file_path, Config & init_config):
-// 		self.model_ = GenericModel[TrieSearch[SeparatelyQuantize, ArrayBhiksha], SortedVocabulary](
-// 			file_path, init_config
-// 		)
+#[derive(Debug, Default)]
+pub struct QuantTrieModel;
 
+#[derive(Debug, Default)]
+pub struct QuantArrayTrieModel;
+
+pub trait ModelTrait {
+    fn new() -> Self {
+
+    }
+}
+
+impl ModelTrait for ProbingModel {
+    fn new() -> Self {
+
+    }
+}
+
+impl ModelTrait for RestProbingModel {
+    fn new() -> Self {
+
+    }
+}
+
+impl ModelTrait for TrieModel {
+    fn new() -> Self {
+
+    }
+}
+
+impl ModelTrait for ArrayTrieModel {
+    fn new() -> Self {
+
+    }
+}
+
+impl ModelTrait for QuantTrieModel {
+    fn new() -> Self {
+
+    }
+}
+
+impl ModelTrait for QuantArrayTrieModel {
+    fn new() -> Self {
+
+    }
+}
 
 #[derive(Debug)]
 pub struct LongestPointer;
@@ -215,11 +239,11 @@ trait Search {
 impl BhikshaBase {
     fn UpdateConfigFromBinary(self, file: &BinaryFormat, offset: u64, config: &Config);
 
-    fn Size(self, max_offset: u64, max_next: u64, config: &Config) -> u64;
+    fn Size(&self, max_offset: u64, max_next: u64, config: &Config) -> u64;
 
-    fn InlineBits(self, max_offset: u64, max_next: u64, config: &Config) -> u8;
+    fn InlineBits(&self, max_offset: u64, max_next: u64, config: &Config) -> u8;
 
-    fn ReadNext(self, base: RefCell, bit_offset: u64, index: u64, total_bits: u8, out: &NodeRange);
+    fn ReadNext(&self, base: RefCell, bit_offset: u64, index: u64, total_bits: u8, out: &NodeRange);
 }
 
 impl Bhiksha for ArrayBhiksha {}
@@ -242,19 +266,19 @@ impl Search for TrieSearch<Quant, Bhiksha> {
     fn new() -> Self {}
 
     fn UpdateConfigFromBinary(
-        self,
+        &self,
         file: &BinaryFormat,
         counts: &Vec<u64>,
         offset: u64,
         config: &Config,
     );
 
-    fn Size(self, counts: &Vec<u64>, config: &Config) -> u64;
+    fn Size(&self, counts: &Vec<u64>, config: &Config) -> u64;
 
-    fn SetupMemory(self, start: u8, counts: &Vec<u64>, config: &Config) -> &u8;
+    fn SetupMemory(&self, start: u8, counts: &Vec<u64>, config: &Config) -> &u8;
 
     fn InitializeFromARPA(
-        self,
+        &self,
         file: &str,
         f: &FilePiece,
         counts: &Vec<u64>,
@@ -264,19 +288,19 @@ impl Search for TrieSearch<Quant, Bhiksha> {
     );
 
     fn LookupUnigram(
-        self,
+        &self,
         word: WordIndex,
         node: &Node,
         independent_left: &bool,
         extend_left: &u64,
     ) -> UnigramPointer;
 
-    fn UnknownUnigram(self) -> ProbBackoff;
+    fn UnknownUnigram(&self) -> ProbBackoff;
 
-    fn Unpack(self, extend_pointer: u64, extend_length: &str, node: &Node) -> MiddlePointer;
+    fn Unpack(&self, extend_pointer: u64, extend_length: &str, node: &Node) -> MiddlePointer;
 
     fn LookupMiddle(
-        self,
+        &self,
         order_minus_2: &str,
         word: WordIndex,
         node: &Node,
@@ -290,7 +314,7 @@ impl Config {
 }
 
 impl State {
-    pub fn Compare(self, other: &State);
+    pub fn Compare(&self, other: &State);
 }
 
 impl GenericModel<Search, VocabularyT> {
@@ -298,7 +322,7 @@ impl GenericModel<Search, VocabularyT> {
 
     // Get the size of memory that will be mapped given ngram counts. This
     // does not includes small non-mapped control structures, such as this class itself.
-    fn Size(self, counts: &Vec<u64>, config: &Config) -> i64;
+    fn Size(&self, counts: &Vec<u64>, config: &Config) -> i64;
 
     // Get the state for a context. Don't use this if you can avoid it. Use
     // BeginSentenceState or NullContextState and extend from those. If
@@ -306,13 +330,13 @@ impl GenericModel<Search, VocabularyT> {
     // To use this function, make an array of WordIndex containing the context
     // vocabulary ids in reverse order.  Then, pass the bounds of the array:
     // [context_rbegin, context_rend).
-    pub fn GetState(self, context_rbegin: &WordIndex, context_rend: &WordIndex, out_state: &State);
+    pub fn GetState(&self, context_rbegin: &WordIndex, context_rend: &WordIndex, out_state: &State);
 
     // Score p(new_word | in_state) and incorporate new_word into out_state.
     // Note that in_state and out_state must be different references:
     // &in_state != &out_state.
     pub fn FullScore(
-        self,
+        &self,
         in_state: &State,
         new_word: WordIndex,
         out_state: &State,
@@ -325,7 +349,7 @@ impl GenericModel<Search, VocabularyT> {
     // [context_rbegin, context_rend).  The new_word is not part of the context
     // array unless you intend to repeat words.
     pub fn FullScoreForgotState(
-        self,
+        &self,
         context_rbegin: &WordIndex,
         context_rend: &WordIndex,
         new_word: WordIndex,
@@ -334,35 +358,35 @@ impl GenericModel<Search, VocabularyT> {
 }
 
 impl MiddlePointer {
-    pub fn Found(self) -> bool;
-    pub fn Prob(self) -> f64;
-    pub fn Backoff(self) -> f64;
-    pub fn Rest(self) -> f64;
-    pub fn Write(self, prob: f64, backoff: f64);
+    pub fn Found(&self) -> bool;
+    pub fn Prob(&self) -> f64;
+    pub fn Backoff(&self) -> f64;
+    pub fn Rest(&self) -> f64;
+    pub fn Write(&self, prob: f64, backoff: f64);
 }
 
 trait Quant {
     pub fn new() -> Self {}
 
-    pub fn UpdateConfigFromBinary(self, bin_format: &BinaryFormat, inp: u64, config: &Config);
+    pub fn UpdateConfigFromBinary(&self, bin_format: &BinaryFormat, inp: u64, config: &Config);
 
-    pub fn Size(self, inp: u64, config: &Config) -> u64;
+    pub fn Size(&self, inp: u64, config: &Config) -> u64;
 
-    pub fn MiddleBits(self, config: &Config) -> u8;
+    pub fn MiddleBits(&self, config: &Config) -> u8;
 
-    pub fn LongestBits(self, config: &Config) -> u8;
+    pub fn LongestBits(&self, config: &Config) -> u8;
 
-    pub fn SetupMemory(self, void: RefCell<i8>, inp_char: &str, config: &Config);
+    pub fn SetupMemory(&self, void: RefCell<i8>, inp_char: &str, config: &Config);
 
-    pub fn Train(self, inp: u8, &vector1: Vec<f64>, vector2: Vec<f64>);
+    pub fn Train(&self, inp: u8, &vector1: Vec<f64>, vector2: Vec<f64>);
 
-    pub fn TrainProb(self, inp: u8, &vector: Vec<f64>);
+    pub fn TrainProb(&self, inp: u8, &vector: Vec<f64>);
 
-    pub fn FinishedLoading(self, config: &Config);
+    pub fn FinishedLoading(&self, config: &Config);
 
-    pub fn GetTables(self, inp_char: &str, order_minus_2: i8) -> &Bins;
+    pub fn GetTables(&self, inp_char: &str, order_minus_2: i8) -> &Bins;
 
-    pub fn LongestTable(self) -> &Bins;
+    pub fn LongestTable(&self) -> &Bins;
 }
 
 impl Quant for DontQuantize {
@@ -386,12 +410,12 @@ impl QueryPrinter {
         flush: bool,
     ) -> Self;
 
-    pub fn Word(self, surface: StringPiece, vocab: WordIndex, ret: &FullScoreReturn);
+    pub fn Word(&self, surface: StringPiece, vocab: WordIndex, ret: &FullScoreReturn);
 
-    pub fn Line(self, oov: u64, total: f64);
+    pub fn Line(&self, oov: u64, total: f64);
 
     pub fn Summary(
-        self,
+        &self,
         ppl_including_oov: f64,
         ppl_excluding_oov: f64,
         corpus_oov: u64,
@@ -400,10 +424,10 @@ impl QueryPrinter {
 }
 
 impl Search for HashedSearch<Value> {
-    fn FastMakeNode(self, begin: WordIndex, end: WordIndex, node: &Node) -> bool;
+    fn FastMakeNode(&self, begin: WordIndex, end: WordIndex, node: &Node) -> bool;
 
     fn InitializeFromARPA(
-        self,
+        &self,
         file: &str,
         f: &FilePiece,
         counts: &Vec<u64>,
@@ -412,10 +436,10 @@ impl Search for HashedSearch<Value> {
         backing: &BinaryFormat,
     );
 
-    fn LookupLongest(self, word: WordIndex, node: &Node) -> LongestPointer;
+    fn LookupLongest(&self, word: WordIndex, node: &Node) -> LongestPointer;
 
     fn LookupMiddle(
-        self,
+        &self,
         order_minus_2: &str,
         word: WordIndex,
         node: &Node,
@@ -424,25 +448,25 @@ impl Search for HashedSearch<Value> {
     ) -> MiddlePointer;
 
     fn LookupUnigram(
-        self,
+        &self,
         word: WordIndex,
         node: &Node,
         independent_left: &bool,
         extend_left: &u64,
     ) -> UnigramPointer;
 
-    fn Order(self) -> &str;
+    fn Order(&self) -> &str;
 
-    fn SetupMemory(self, start: u8, counts: &Vec<u64>, config: &Config) -> u8;
+    fn SetupMemory(&self, start: u8, counts: &Vec<u64>, config: &Config) -> u8;
 
-    fn Size(self, counts: &Vec<u64>, config: &Config) -> u64;
+    fn Size(&self, counts: &Vec<u64>, config: &Config) -> u64;
 
-    fn UnknownUnigram(self) -> &ProbBackoff;
+    fn UnknownUnigram(&self) -> &ProbBackoff;
 
-    fn Unpack(self, extend_pointer: u64, extend_length: &str, node: &Node) -> MiddlePointer;
+    fn Unpack(&self, extend_pointer: u64, extend_length: &str, node: &Node) -> MiddlePointer;
 
     fn UpdateConfigFromBinary(
-        self,
+        &self,
         binary_format: &BinaryFormat,
         vector: &Vec<u64>,
         myint: uint64_t,
@@ -453,7 +477,7 @@ impl Search for HashedSearch<Value> {
 trait VocabularyT {
     fn new() -> Self {}
 
-    pub fn Index(self, inp_str: &StringPiece) -> WordIndex {}
+    pub fn Index(&self, inp_str: &StringPiece) -> WordIndex {}
 }
 
 impl VocabularyT for SortedVocabulary {
@@ -461,7 +485,7 @@ impl VocabularyT for SortedVocabulary {
         return SortedVocabulary();
     }
 
-    fn Index(self, inp_str: &StringPiece) -> WordIndex {}
+    fn Index(&self, inp_str: &StringPiece) -> WordIndex {}
 }
 
 impl VocabularyT for ProbingVocabulary {
@@ -469,7 +493,7 @@ impl VocabularyT for ProbingVocabulary {
         return ProbingVocabulary();
     }
 
-    fn Index(self, inp_str: &StringPiece) -> WordIndex {}
+    fn Index(&self, inp_str: &StringPiece) -> WordIndex {}
 }
 
 pub fn Query<Model, Printer>(

@@ -14,8 +14,8 @@ impl Discount {
         Discount { amount: () }
     }
 
-    pub fn Get(self, count: u64) -> f64;
-    pub fn Apply(self, count: u64) -> f64;
+    pub fn Get(&self, count: u64) -> f64;
+    pub fn Apply(&self, count: u64) -> f64;
 }
 
 
@@ -39,8 +39,8 @@ pub struct OutputHook;
 
 impl OutputHook{
     pub fn new(hook_type: HookType) -> Self;
-    pub fn Sink(self, info: &HeaderInfo, vocab_file: i64, chains: &Chains);
-    pub fn Type(self) -> HookType;
+    pub fn Sink(&self, info: &HeaderInfo, vocab_file: i64, chains: &Chains);
+    pub fn Type(&self) -> HookType;
 }
 
 #[derive(Debug, Clone)]
@@ -49,20 +49,20 @@ pub struct Output;
 impl Output {
     pub fn new(file_base: StringPiece, keep_buffer: bool, output_q: bool ) -> Self;
     
-    pub fn Add(self, outhook: OutputHook);
+    pub fn Add(&self, outhook: OutputHook);
 
-    pub fn Have(self, hook_type: HookType) -> bool;
+    pub fn Have(&self, hook_type: HookType) -> bool;
 
-    pub fn VocabFile(self) -> i64;
+    pub fn VocabFile(&self) -> i64;
 
-    pub fn SetHeader(self, header: &HeaderInfo);
+    pub fn SetHeader(&self, header: &HeaderInfo);
     
-    pub fn GetHeader(self) -> &HeaderInfo;
+    pub fn GetHeader(&self) -> &HeaderInfo;
 
     // This is called by the pipeline.
-    pub fn SinkProbs(self, chains: &Chains);
+    pub fn SinkProbs(&self, chains: &Chains);
     
-    pub fn Steps(self) -> u64;
+    pub fn Steps(&self) -> u64;
 }
 
 
@@ -76,7 +76,7 @@ impl CorpusCount {
     fn DedupeMultiplier(order: i8) -> f64;
 
     // How much memory vocabulary will use based on estimated size of the vocab.
-    fn VocabUsage(self, vocab_estimate: i8) -> i8;
+    fn VocabUsage(&self, vocab_estimate: i8) -> i8;
 
     // type_count aka vocabulary size.  Initialize to an estimate.  It is set to the exact value.
     fn new(
@@ -91,7 +91,7 @@ impl CorpusCount {
         disallowed_symbol: WarningAction
     ) -> Self;
 
-    fn Run(self, position: &ChainPosition);
+    fn Run(&self, position: &ChainPosition);
 }
 
 #[derive(Debug, Clone)]
