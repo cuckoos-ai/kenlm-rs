@@ -1,7 +1,6 @@
 // cimport kenlm
 // cimport constant as ct
 
-
 // class Py_NgramConfig:
 // 	"""
 // 	Wrapper around lm::ngram::Config.
@@ -61,6 +60,9 @@
 
 // 	def __del__(self):
 // 		del self._c_config
+
+
+
 
 
 // cdef class GenericModel__template:

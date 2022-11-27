@@ -4,15 +4,15 @@ version = "0.0.1"
 authors = ["Sandip Dey <sandip.dey1988@yahoo.com>"]
 # edition = "2022"
 
-[lib]
-name = "kenlm-rs"
+# [lib]
+# name = "kenlmrs"
 # "cdylib" is necessary to produce a shared library for Python to import from.
 #
 # Downstream Rust code (including code in `bin/`, `examples/`, and `tests/`) will not be able
 # to `use string_sum;` unless the "rlib" or "lib" crate type is also included, e.g.:
 # crate-type = ["cdylib", "rlib"]
-crate-type = ["cdylib"]
+# crate-type = ["cdylib"]
 
-# [dependencies.kemlm]
+# [dependencies.kenlmrs]
 # version = "*"
-# path = ".."
+# path = "../kenlmrs"
