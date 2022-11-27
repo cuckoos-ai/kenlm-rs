@@ -26,6 +26,18 @@
 // 	def __dealloc__(self):
 // 		del self
 
+fn RunThreadedFilter() -> Option() {
+
+}
+
+fn RunContextFilter() -> Option() {
+
+}
+
+fn DispatchBinaryFilter() -> Option() {
+
+}
+
 
 // cdef void RunThreadedFilter(
 // 	Config & config,

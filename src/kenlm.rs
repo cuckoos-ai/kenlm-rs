@@ -1,291 +1,276 @@
-// cimport util
-// cimport ngram
-// from libcpp cimport bool
-// from libcpp.string cimport string
-// from libcpp.vector cimport vector
-// from libc.stdint cimport  uintptr_t, uint64_t
+use std::collections::HashMap;
+use std::fs::{read_to_string, File};
+use std::io::prelude::*;
+use std::io::BufReader;
+use std::ops::{Deref, DerefMut};
+use std::path::{Path, PathBuf};
 
+use core::option::Option;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
-// cdef extern from "lm/word_index.hh" namespace "lm":
-//     ctypedef unsigned WordIndex
+pub type Error = Box<dyn std::error::Error + Send + Sync>;
+pub type Result<T> = std::result::Result<T, Error>;
 
-// cdef extern from "lm/return.hh" namespace "lm":
-//     cdef struct FullScoreReturn:
-//         float prob
-//         unsigned char ngram_length
+#[derive(Debug, Clone, Copy)]
+pub struct WordIndex;
 
+#[derive(Debug, Clone, Copy)]
+pub struct StringPiece {
+    size_type: i8
+}
 
-// cdef extern from "lm/virtual_interface.hh" namespace "lm::base" nogil:
-//     cdef cppclass Vocabulary:
-//         WordIndex Index(char *) except +
-//         WordIndex BeginSentence() except +
-//         WordIndex EndSentence() except +
-//         WordIndex NotFound() except +
+impl StringPiece {
+    pub fn new(inp_string: &str) -> Self;
+}
 
-//     ctypedef Vocabulary const_Vocabulary
+#[derive(Debug, Clone, Copy)]
+pub struct Model;
 
-//     cdef cppclass Model:
-//         void BeginSentenceWrite(void *)
+#[derive(Debug, Clone, Copy)]
+pub struct Vocabulary;
 
-//         void NullContextWrite(void *)
+#[derive(Debug, Clone, Copy)]
+pub struct ModelBuffer;
 
-//         unsigned int Order()
+#[derive(Debug)]
+pub struct ProbBackoff {
+    prob: f64,
+    backoff: f64,
+}
 
-//         const_Vocabulary& BaseVocabulary()
+#[derive(Debug, Clone, Copy)]
+pub struct NGram;
 
-//         float BaseScore(void *in_state, WordIndex new_word, void *out_state)
+#[derive(Debug, Clone, Copy)]
+pub struct EnumerateVocab;
 
-//         FullScoreReturn BaseFullScore(void *in_state, WordIndex new_word, void *out_state)
+#[derive(Debug, Clone, Copy)]
+pub struct FullScoreReturn;
 
+#[derive(Debug, Clone, Copy)]
+pub struct Uninterpolated {
+    // Uninterpolated probability.
+    prob: f64,
+    // Interpolation weight for lower order.
+    gamma: f64,
+}
 
+#[derive(Debug, Clone, Copy)]
+pub struct BuildingPayload {
+    count: u64,
 
+    uninterp: Uninterpolated,
 
-// cdef extern from "lm/return.hh" namespace "lm":
-//     cdef struct FullScoreReturn:
-//         float prob  # log10 probability
+    complete: ProbBackoff,
+}
 
-//         # The length of n-gram matched.  Do not use this for recombination.
-//         # Consider a model containing only the following n-grams:
-//         # * -1 foo
-//         # * -3.14  bar
-//         # * -2.718 baz -5
-//         # * -6 foo bar
-//         #
-//         # If you score ``bar'' then ngram_length is 1 and recombination state is the
-//         # empty string because bar has zero backoff and does not extend to the right.
-//         # If you score ``foo'' then ngram_length is 1 and recombination state is ``foo''.
-//         # 
-//         # Ideally, keep output states around and compare them.  Failing that,
-//         # get out_state.ValidLength() and use that length for recombination.
-//         unsigned char ngram_length
+#[derive(Debug, Clone, Copy)]
+pub struct ARPAOutput;
 
-//         # Left extension information.  If independent_left is set, then prob is
-//         # independent of words to the left (up to additional backoff).  Otherwise,
-//         # extend_left indicates how to efficiently extend further to the left.
-//         bool independent_left
-//         uint64_t extend_left  # Defined only if independent_left
+#[derive(Debug, Clone, Copy)]
+pub struct CountOutput;
 
-//         # Rest cost for extension to the left.
-//         float rest
+#[derive(Debug, Clone, Copy)]
+pub struct MultipleOutput<Single>;
 
+#[derive(Debug, Clone, Copy)]
+pub struct ARPAFormat;
 
-// cdef extern from "lm/wrappers/nplm.hh" namespace "lm::np":
-//     cdef cppclass Model:
-//         # Does this look like an NPLM
-//         @staticmethod
-//         bool Recognize(const string & file) except +
+#[derive(Debug)]
+pub struct CountFormat;
 
-//         FullScoreReturn FullScore(const State &, const WordIndex &, State &) except +
+#[derive(Debug)]
+pub struct Controller<Filter, OutputBuffer, RealOutput>;
 
-//         FullScoreReturn FullScoreForgotState(
-//             const WordIndex *context_rbegin, const WordIndex *context_rend,
-//             const WordIndex new_word, State & out_state ) except +
+#[derive(Debug)]
+pub struct BinaryFilter<Binary>;
 
+trait OutputBuffer {}
+#[derive(Debug, Clone, Copy)]
+pub struct BinaryOutputBuffer;
 
-// cdef extern  from "lm/weights.hh" namespace "lm":
-//     ctypedef struct ProbBackoff:
-//         float prob
-//         float backoff
+#[derive(Debug, Clone, Copy)]
+pub struct MultipleOutputBuffer;
 
-// kArrayAdd = None
+// Exceptions
+#[derive(Debug)]
+pub struct SpecialWordMissingException;
 
-// cdef extern from "python/score_sentence.hh" namespace "lm::base":
-//     cdef float ScoreSentence(const Model *model, const char *sentence) except +
+#[derive(Debug)]
+struct ConfigException;
 
+#[derive(Debug)]
+struct LoadException;
 
-// cdef extern from "lm/enumerate_vocab.hh" namespace "lm":
-//     cdef cppclass EnumerateVocab:
-//         void Add(WordIndex index, const util.StringPiece & string_) except +
+#[derive(Debug)]
+struct FormatLoadException;
 
+#[derive(Debug)]
+struct VocabLoadException;
 
-// cdef extern from "lm/return.hh" namespace "lm":
-//     cdef struct FullScoreReturn:
-//         # log10 probability
-//         float prob
+impl OutputBuffer for BinaryOutputBuffer {}
 
-//         # * The length of n-gram matched.  Do not use this for recombination.
-//         # * Consider a model containing only the following n-grams:
-//         # * -1 foo
-//         # * -3.14  bar
-//         # * -2.718 baz -5
-//         # * -6 foo bar
-//         # *
-//         # * If you score ``bar'' then ngram_length is 1 and recombination state is the
-//         # * empty string because bar has zero backoff and does not extend to the
-//         # * right.
-//         # * If you score ``foo'' then ngram_length is 1 and recombination state is
-//         # * ``foo''.
-//         # *
-//         # * Ideally, keep output states around and compare them.  Failing that,
-//         # * get out_state.ValidLength() and use that length for recombination.
-//         unsigned char ngram_length
+impl OutputBuffer for MultipleOutputBuffer {}
 
-//         # * Left extension information.  If independent_left is set, then prob is
-//         # * independent of words to the left (up to additional backoff).  Otherwise,
-//         # * extend_left indicates how to efficiently extend further to the left.
-//         bool independent_left
+trait Buffer {
+    pub fn new(self) -> Self {}
 
-//         # Defined only if independent_left
-//         uint64_t extend_left
+    /// .
+    pub fn Reserve(self, size: i64);
 
-//         # Rest cost for extension to the left.
-//         float rest
+    /// .
+    pub fn AddNGram(self, line: &StringPiece);
+}
 
+impl Buffer for MultipleOutputBuffer {
+    fn single_add_ngram(self, offset: i64, line: &StringPiece) {}
 
-// cdef extern from "<Eigen/Core>" namespace "Eigen":
-//     cdef void initParallel() except +
+    fn new(self) -> Self {}
+}
 
+trait Format<Filter, Out> {
+    pub fn run_filter<Filter, Out>(self, in_fp: &FilePiece, filter_: &Filter, output: &Out);
 
-// cdef extern from "lm/common/model_buffer.hh" namespace "lm":
-//     cdef cppclass ModelBuffer:
-//         # Construct for writing.  Must call VocabFile() and fill it with null-delimited vocab words.
-//         ModelBuffer(util.StringPiece file_base, bool keep_buffer, bool output_q) except +
+    pub fn copy(self, in_fp: &FilePiece, out: &ARPAOutput);
+}
 
-//         # Load from file.
-//         void ModelBuffer(util.StringPiece file_base) except +
+impl Format for CountFormat {}
 
-//         # Must call VocabFile and populate before calling this function.
-//         void Sink(util.Chains & chains, const vector[uint64_t] & counts) except +
+impl Format for ARPAFormat {}
 
-//         # Read files and write to the given chains. If fewer chains are provided, only do the lower orders.
-//         void Source(util.Chains & chains) except +
+impl Model {
+    pub fn BeginSentenceWrite(self);
 
-//         void Source(size_t order_minus_1, Chain & chain) except +
+    pub fn NullContextWrite(self);
 
-//         # The order of the n-gram model that is associated with the model buffer.
-//         size_t Order() const
-//         # Requires Sink or load from file.
-//         const vector[uint64_t] & Counts() const
+    pub fn Order(self) -> u64;
 
-//         int VocabFile() const
+    pub fn BaseVocabulary(self) -> Vocabulary;
 
-//         int RawFile(size_t order_minus_1) const
+    pub fn BaseScore(self, in_state: T, new_word: WordIndex, out_state: T) -> f64;
 
-//         bool Keep() const
+    pub fn BaseFullScore(self, in_state: T, new_word: WordIndex, out_state: T) -> FullScoreReturn;
+}
 
-//         # Slowly execute a language model query with binary search.
-//         # This is used by interpolation to gather tuning probabilities rather than scanning the files.
-//         float SlowQuery(const State & context, WordIndex word, State & out) const
+impl ModelBuffer {
+    // Construct for writing.  Must call VocabFile() and fill it with null-delimited vocab words.
+    // Load from file.
+    pub fn new(file_base: &StringPiece, keep_buffer: bool, output_q: bool) -> Self {}
 
+    // Must call VocabFile and populate before calling this function.
+    pub fn sink(self, chains: &Chains, counts: Vec<u64>) -> Result<()>;
 
-// cdef extern from "lm/lm_exception.hh" namespace "lm":
+    pub fn model_buffer(self, file_base: &StringPiece) -> Result<()>;
 
-//     cdef cppclass ConfigException:
-//         ConfigException() except +
+    // # Read files and write to the given chains. If fewer chains are provided, only do the lower orders.
+    pub fn source(self, chains: &Chains) -> Option<()>;
 
-//     cdef cppclass LoadException:
-//         LoadException() except +
+    pub fn source(self, order_minus_1: i8, chain: &Chain) -> Option<()>;
 
-//     cdef cppclass FormatLoadException:
-//         FormatLoadException() except +
+    // The order of the n-gram model that is associated with the model buffer.
+    fn order() -> i8;
 
-//     cdef cppclass VocabLoadException:
-//         VocabLoadException() except +
+    // Requires Sink or load from file.
+    fn counts() -> Vec<u64>;
 
-//     cdef cppclass SpecialWordMissingException:
-//         SpecialWordMissingException() except +
+    fn vocab_file(self) -> i64;
 
+    fn raw_file(self, order_minus_1: i8) -> i64;
 
-// cdef extern from "lm/builder/payload.hh" namespace "lm::builder":
-//     ctypedef struct Uninterpolated:
-//         # Uninterpolated probability.
-//         float prob
-//         # Interpolation weight for lower order.
-//         float gamma
+    // fn SlowQuery(self, context: &State, word: &WordIndex, out: &State) -> Result<()>;
+    fn keep(self) -> bool;
 
-//     ctypedef struct BuildingPayload:
-//         uint64_t count
-//         Uninterpolated uninterp
-//         ProbBackoff complete
+    // Slowly execute a language model query with binary search.
+    // This is used by interpolation to gather tuning probabilities rather than scanning the files.
+    fn slow_query(self, context: &State, word: &WordIndex, out: &State) -> f64;
+}
 
-//         bool IsMarked() const
+impl Vocabulary {
+    fn index(self, id: &str) -> WordIndex;
 
-//         void Mark() except +
+    fn begin_sentence(self) -> Result<()>;
 
-//         void Unmark() except +
+    fn end_sentence(self) -> Result<()>;
 
-//         uint64_t UnmarkedCount() const
+    fn not_found(self) -> Option<()>;
+}
 
-//         uint64_t CutoffCount() const
+#[derive(Clone, Copy, Debug, Default)]
+struct FullScoreReturn {
+    prob: f64, // log10 probability
 
+    // The length of n-gram matched.  Do not use this for recombination.
+    // Consider a model containing only the following n-grams:
+    // * -1 foo
+    // * -3.14  bar
+    // * -2.718 baz -5
+    // * -6 foo bar
+    //
+    // If you score ``bar'' then ngram_length is 1 and recombination state is the
+    // empty string because bar has zero backoff and does not extend to the right.
+    // If you score ``foo'' then ngram_length is 1 and recombination state is ``foo''.
+    //
+    // Ideally, keep output states around and compare them.  Failing that,
+    // get out_state.ValidLength() and use that length for recombination.
+    ngram_length: String,
 
-// cdef extern from "lm/kenlm_benchmark_main.cc" namespace "lm":
-//     cdef QueryFromBytes(const Model & model, const Config & config) except +
-//     cdef ConvertToBytes(const Model & model, int fd_in) except +
+    // Left extension information.  If independent_left is set, then prob is
+    // independent of words to the left (up to additional backoff).  Otherwise,
+    // extend_left indicates how to efficiently extend further to the left.
+    independent_left: bool,
 
+    extend_left: u64,
 
-// cdef extern from "lm/common/ngram.hh" namespace "lm":
-//     cdef cppclass NGram:
+    // Rest cost for extension to the left.
+    rest: f64,
+}
 
-//         @staticmethod
-//         size_t TotalSize(size_t order) except +
+impl Default for FullScoreReturn {
+    fn default() -> Self {
+        Self {}
+    }
+}
 
-//         @staticmethod
-//         size_t OrderFromSize(size_t size) except +
+trait Model {
+    fn Recognize(&self, file: &str) -> Option<()> {}
 
+    fn FullScore(&self, state: &State, word_index: &WordIndex, state: &State) -> FullScoreReturn {}
 
-// cdef extern from "<boost/range/iterator_range.hpp>" namespace "boost":
-//     cdef cppclass iterator_range[IteratorT]:
-//         pass
+    /// .
+    fn FullScoreForgotState(
+        &self,
+        context_rbegin: &WordIndex,
+        context_rend: &WordIndex,
+        new_word: &WordIndex,
+        out_state: &State,
+    ) -> FullScoreReturn;
+}
 
+impl EnumerateVocab {
+    fn Add(self, index: WordIndex, string: &StringPiece) -> Result<()>;
+}
 
-// cdef extern from "lm/filter/arpa_io.hh" namespace "lm":
-//     cdef cppclass ARPAOutput:
-//         pass
+impl BuildingPayload {
+    pub fn is_marked(self) -> bool;
 
-// cdef extern from "lm/filter/count_io.hh" namespace "lm":
-//     cdef cppclass CountOutput:
-//         pass
+    pub fn mark(self);
 
-// cdef extern from "lm/filter/format.hh" namespace "lm":
+    pub fn unmark(self);
 
-//     cdef cppclass MultipleOutput[Single]:
-//         pass
+    pub fn unmarked_count(self) -> u64;
 
-//     cdef struct ARPAFormat:
-//         @staticmethod
-//         void Copy(util.FilePiece &in_, ARPAOutput &out) except +
+    pub fn cutoff_count(self) -> u64;
+}
 
-//         @staticmethod
-//         void RunFilter[Filter, Out](util.FilePiece &in_, Filter &filter_, Out &output) except +
+impl NGram {
+    pub fn total_size(self, order: i64) -> i64;
 
-//     cdef struct CountFormat:
-//         @staticmethod
-//         void Copy(util.FilePiece &in_, Output &out_) except +
+    pub fn order_from_size(self, size: i64) -> i64;
+}
 
-//         @staticmethod
-//         void RunFilter[Filter, Out](util.FilePiece &in_, Filter &filter_, Out &output) except +
+pub fn score_sentence(model: Model, sentence: &str) -> f64 {}
 
+pub fn query_from_bytes(model: &Model, config: &Config) {}
 
-// cdef extern from "lm/filter/wrapper.hh" namespace "lm":
-
-//     cdef cppclass BinaryFilter[Binary]:
-//         pass
-
-// cdef extern from "lm/filter/format.hh" namespace "lm":
-//     cdef cppclass BinaryOutputBuffer:
-//         void Reserve(size_t size) except +
-
-//         void AddNGram(const util.StringPiece & line) except +
-
-//     cdef cppclass MultipleOutputBuffer:
-//         MultipleOutputBuffer() except +
-
-//         void Reserve(size_t size) except +
-
-//         void AddNGram(const util.StringPiece &line) except +
-
-//         void SingleAddNGram(size_t offset, const util.util.StringPiece &line) except +
-
-
-// cdef extern from "lm/filter/thread.hh" namespace "lm":
-//     cdef cppclass Controller[Filter, OutputBuffer, RealOutput]:
-//         pass
-
-// cpdef class Py_QueryPrinter:
-//     cdef:
-//         ngram.QueryPrinter _query_p
-//         int fd
-//         bool print_word
-//         bool print_line
-//         bool print_summary
+pub fn convert_to_bytes(model: &Model, fd_in: i64) {}

@@ -7,8 +7,14 @@ from .lib import interpolate, util, builder, benchmark, constant as ct, kenlm, n
 import sys
 from hashlib import sha256
 from .dataclass._dataclass import (
-    LMPZParser, QueryParser, BenchmarkParser, NgramCounterParser,
-    FilterParser, BinaryParser, InterpolateParser, StreamingParser
+    LMPZParser, 
+    QueryParser, 
+    BenchmarkParser, 
+    NgramCounterParser,
+    FilterParser, 
+    BinaryParser, 
+    InterpolateParser, 
+    StreamingParser
 )
 
 FILE_NAME = "ngrams"

@@ -1,99 +1,85 @@
-// cimport numpy as np
-// from enum import Enum
-// from libc.stdint cimport uintptr_t
-// from cpython import (PyUnicode_AsUTF8String, PyUnicode_DecodeUTF8, PyBytes_CheckExact,
-//                      PyBytes_FromStringAndSize, PyBytes_GET_SIZE, PyBytes_AS_STRING)
+use core::option::Option;
+use numpy::ndarray::{ArrayD, ArrayViewD, ArrayViewMutD};
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
-// ctypedef np.npy_float32 DTYPE_t          # Type of X
-// ctypedef np.npy_float64 DOUBLE_t         # Type of y, sample_weight
-// ctypedef np.npy_intp SIZE_t              # Type for indices and counters
-// ctypedef np.npy_int32 INT32_t            # Signed 32 bit integer
-// ctypedef np.npy_int64 INT64_t            # Signed 64 bit integer
-// ctypedef np.npy_uint32 UINT32_t          # Unsigned 32 bit integer
-// ctypedef np.npy_uint64 UINT64_t          # Unsigned 64 bit integer
-// ctypedef uintptr_t size_t
+#[derive(Debug)]
+pub(crate) enum ARPALoadComplain {
+    ALL = 1,
+    EXPENSIVE = 2,
+    NONE = 3,
+}
 
+#[derive(Debug)]
+pub enum WriteMethod {
+    WRITE_MMAP = 1,  // Map the file directly.
+    WRITE_AFTER = 2, // Write after we're done.
+}
 
-// cdef enum ARPALoadComplain:
-//     ALL = 1
-//     EXPENSIVE = 2
-//     NONE = 3
+// Left rest options. Only used when the model includes rest costs.
+#[derive(Debug)]
+pub enum RestFunction {
+    REST_MAX,   // Maximum of any score to the left
+    REST_LOWER, // Use lower-order files given below.
+}
 
+pub(crate) enum FilterMode {
+    MODE_COPY = 1,
+    MODE_SINGLE = 2,
+    MODE_MULTIPLE = 3,
+    MODE_UNION = 4,
+    MODE_UNSET = 5,
+}
 
-// cdef enum WriteMethod:
-//     WRITE_MMAP = 1  # Map the file directly.
-//     WRITE_AFTER = 2  # Write after we're done.
-
-
-// # Left rest options. Only used when the model includes rest costs.
-// cdef enum RestFunction:
-//     REST_MAX = 1 # Maximum of any score to the left
-//     REST_LOWER = 2 # Use lower-order files given below.
-
-
-// cpdef enum FilterMode:
-//     MODE_COPY = 1
-//     MODE_SINGLE = 2
-//     MODE_MULTIPLE = 3
-//     MODE_UNION = 4
-//     MODE_UNSET = 5
-
-
-// cpdef enum WarningAction:
-//     THROW_UP = 1
-//     COMPLAIN = 2
-//     SILENT = 3
-
-// # cdef enum WarningAction:
-// #     THROW_UP = 1
-// #     COMPLAIN = 2
-// #     SILENT = 3
-
-// cpdef enum Format:
-//     FORMAT_ARPA = 1
-//     FORMAT_COUNT = 2
-// 
+#[derive(Debug)]
+pub(crate) enum WarningAction {
+    THROW_UP = 1,
+    COMPLAIN = 2,
+    SILENT = 3,
+}
 
 // ------------------
-// Constant PYX below 
+// Constant PYX below
 // ------------------
+#[derive(Debug)]
+pub(crate) enum ModelType {
+    PROBING,
+    REST_PROBING,
+    TRIE,
+    QUANT_TRIE,
+    ARRAY_TRIE,
+    QUANT_ARRAY_TRIE,
+}
 
-// from libc.stdint cimport  uintptr_t, uint64_t
-// from enum import Enum
-// cimport kenlm
+#[derive(Debug)]
+pub(crate) enum Format {
+    FORMAT_ARPA,
+    FORMAT_COUNT,
+}
 
-// ctypedef uintptr_t size_t
+#[derive(Debug)]
+pub(crate) enum LoadMethod {
+    LAZY = 1,
+    POPULATE_OR_LAZY = 2,
+    POPULATE_OR_READ = 3,
+    READ = 4,
+    PARALLEL_READ = 5,
+}
 
+#[derive(Debug)]
+pub(crate) enum FormatEnum {
+    FORMAT_ARPA,
+    FORMAT_COUNT,
+}
 
-// class Py_ARPALoadComplain(Enum):
-// 	ALL = ARPALoadComplain.ALL
-// 	EXPENSIVE = ARPALoadComplain.EXPENSIVE
-// 	NONE = ARPALoadComplain.NONE
-
-
-// class Py_ModelType(Enum):
-// 	PROBING = ModelType.PROBING
-// 	REST_PROBING = ModelType.REST_PROBING
-// 	TRIE = ModelType.TRIE
-// 	QUANT_TRIE = ModelType.QUANT_TRIE
-// 	ARRAY_TRIE = ModelType.ARRAY_TRIE
-// 	QUANT_ARRAY_TRIE = ModelType.QUANT_ARRAY_TRIE
-
-// 	def __iter__(self):
-// 		for mem in self.__members__:
-// 			yield mem
-// 	def __contains__(self, item):
-// 		return item in self.__members__
-
-
-// class Py_FilterMode(Enum):
-// 	MODE_COPY = 1
-// 	MODE_SINGLE = 2
-// 	MODE_MULTIPLE = 3
-// 	MODE_UNION = 4
-// 	MODE_UNSET = 5
-
-
-// class Py_Format(Enum):
-// 	FORMAT_ARPA = 1
-// 	FORMAT_COUNT = 2
+#[derive(Debug)]
+pub(crate) enum HookType {
+    // Probability and backoff (or just q). Output must process the orders in
+    // parallel or there will be a deadlock.
+    PROB_PARALLEL_HOOK,
+    // Probability and backoff (or just q). Output can process orders any way it likes.
+    // This requires writing the data to disk then reading.  Useful for ARPA files, which put unigrams first etc.
+    PROB_SEQUENTIAL_HOOK,
+    // Keep this last so we know how many values there are.
+    NUMBER_OF_HOOKS,
+}

@@ -1,163 +1,176 @@
-
-// cimport kenlm
-// cimport constant
-// from libc.stdint cimport uint64_t
-// from libcpp.string cimport string
-// from libcpp.vector cimport vector
-// from libcpp cimport bool
-// from util cimport StringPiece, Chains, FilePiece, SortConfig, ChainConfig, ChainPosition
+use crate::{kenlm::WordIndex};
+use crate::constant::WarningAction;
+use crate::util::{Chains, FilePiece, SortConfig, ChainConfig, ChainPosition, StringPiece};
 
 
-// cdef extern from "lm/builder/discount.hh" namespace "lm::builder":
-//     cdef struct Discount:
-//         float amount[4]
-//         float Get(uint64_t count) const
-//         float Apply(uint64_t count) const
+
+#[derive(Debug, Default)]
+pub struct Discount {
+    amount: &[i64; 4],
+}
+
+impl Discount {
+    fn new() -> Self {
+        Discount { amount: () }
+    }
+
+    pub fn Get(self, count: u64) -> f64;
+    pub fn Apply(self, count: u64) -> f64;
+}
 
 
-// cdef extern from "lm/builder/header_info.hh" namespace "lm::builder":
-//     cdef struct HeaderInfo:
-//         string input_file
-//         uint64_t token_count
-//         vector[uint64_t] counts_pruned
-//         HeaderInfo() except +
-//         HeaderInfo(const string& input_file_in, uint64_t token_count_in,
-//                    const vector[uint64_t] & counts_pruned_in) except +
+#[derive(Debug)]
+pub struct HeaderInfo {
+    input_file: &str,
+    token_count: u64,
+    counts_pruned: Vec<u64>
+    
+}
+
+impl HeaderInfo {
+    fn new(input_file_in: &str, token_count_in: u64, counts_pruned_in: &Vec<u64>) -> Self {
+        HeaderInfo { input_file: input_file_in, token_count: token_count_in, counts_pruned: counts_pruned_in }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct OutputHook;
 
 
-// cdef extern from "lm/builder/output.hh" namespace "lm::builder":
-//     cdef enum HookType:
-//         # Probability and backoff (or just q). Output must process the orders in
-//         # parallel or there will be a deadlock.
-//         PROB_PARALLEL_HOOK,
-//         # Probability and backoff (or just q). Output can process orders any way it likes.
-//         # This requires writing the data to disk then reading.  Useful for ARPA files, which put unigrams first etc.
-//         PROB_SEQUENTIAL_HOOK,
-//         # Keep this last so we know how many values there are.
-//         NUMBER_OF_HOOKS
+impl OutputHook{
+    pub fn new(hook_type: HookType) -> Self;
+    pub fn Sink(self, info: &HeaderInfo, vocab_file: i64, chains: &Chains);
+    pub fn Type(self) -> HookType;
+}
 
-//     cdef cppclass OutputHook:
-//         OutputHook(HookType hook_type) except +
-//         # void Sink(const HeaderInfo &info, int vocab_file, Chains &chains) = 0
-//         # HookType Type() const
+#[derive(Debug, Clone)]
+pub struct Output;
 
-//     cdef cppclass Output:
-//         Output(StringPiece file_base, bool keep_buffer, bool output_q) except +
-//         void Add(OutputHook *) except +
+impl Output {
+    pub fn new(file_base: StringPiece, keep_buffer: bool, output_q: bool ) -> Self;
+    
+    pub fn Add(self, outhook: OutputHook);
 
-//         bool Have(HookType hook_type) except +
+    pub fn Have(self, hook_type: HookType) -> bool;
 
-//         int VocabFile() except +
+    pub fn VocabFile(self) -> i64;
 
-//         void SetHeader(const HeaderInfo & header) except +
-//         const HeaderInfo & GetHeader() except +
+    pub fn SetHeader(self, header: &HeaderInfo);
+    
+    pub fn GetHeader(self) -> &HeaderInfo;
 
-//         # This is called by the pipeline.
-//         void SinkProbs(Chains & chains) except +
-//         unsigned int Steps() except +
+    // This is called by the pipeline.
+    pub fn SinkProbs(self, chains: &Chains);
+    
+    pub fn Steps(self) -> u64;
+}
 
 
-// cdef extern from "lm/builder/corpus_count.hh" namespace "lm::builder":
-//     cdef cppclass CorpusCount:
-//         # Memory usage will be DedupeMultipler(order) * block_size + total_chain_size + unknown vocab_hash_size
-//         @staticmethod
-//         float DedupeMultiplier(size_t order) except +
+#[derive(Debug, Clone)]
+pub struct CorpusCount {
+    token_count: i64
+}
 
-//         # How much memory vocabulary will use based on estimated size of the vocab.
-//         @staticmethod
-//         size_t VocabUsage(size_t vocab_estimate) except +
+impl CorpusCount {
+    // Memory usage will be DedupeMultipler(order) * block_size + total_chain_size + unknown vocab_hash_size
+    fn DedupeMultiplier(order: i8) -> f64;
 
-//         # token_count: out.
-//         # type_count aka vocabulary size.  Initialize to an estimate.  It is set to the exact value.
-//         CorpusCount(
-//             FilePiece & from_,
-//             int vocab_write,
-//             bool dynamic_vocab,
-//             uint64_t &token_count,
-//             kenlm.WordIndex &type_count,
-//             vector[bool] &prune_words,
-//             const string &prune_vocab_filename,
-//             size_t entries_per_block,
-//             constant.WarningAction disallowed_symbol) except +
+    // How much memory vocabulary will use based on estimated size of the vocab.
+    fn VocabUsage(self, vocab_estimate: i8) -> i8;
 
-//         void Run(const ChainPosition &position) except +
+    // type_count aka vocabulary size.  Initialize to an estimate.  It is set to the exact value.
+    fn new(
+        from_: &FilePiece,
+        vocab_write: i64,
+        dynamic_vocab: bool,
+        token_count: &u64,
+        type_count: &WordIndex,
+        prune_words: &Vec<bool>,
+        prune_vocab_filename: &str,
+        entries_per_block: i8,
+        disallowed_symbol: WarningAction
+    ) -> Self;
 
+    fn Run(self, position: &ChainPosition);
+}
 
-// cdef extern from "lm/builder/adjust_counts.hh" namespace "lm::builder":
-//     cdef struct DiscountConfig:
-//         # Overrides discounts for orders [1,discount_override.size()].
-//         vector[Discount] overwrite
-//         # If discounting fails for an order, copy them from here.
-//         Discount fallback
-//         # What to do when discounts are out of range or would trigger divison by
-//         # zero. It does something other than THROW_UP, use fallback_discount.
-//         constant.WarningAction bad_action;
+#[derive(Debug, Clone)]
+struct InitialProbabilitiesConfig{
+    // These should be small buffers to keep the adder from getting too far ahead
+    adder_in: ChainConfig ,
+    adder_out: ChainConfig ,
+    // SRILM doesn't normally interpolate unigrams.
+    interpolate_unigrams: bool
+}
 
-
-// cdef extern from "lm/builder/pipeline.hh" namespace "lm::builder":
-//     cdef struct PipelineConfig:
-//         size_t order
-//         SortConfig sort
-//         InitialProbabilitiesConfig initial_probs
-//         ChainConfig read_backoffs
-
-//         # Estimated vocabulary size.  Used for sizing CorpusCount memory and initial probing hash table sizing, also in CorpusCount.
-//         kenlm.WordIndex vocab_estimate
-
-//         # Minimum block size to tolerate.
-//         size_t minimum_block
-
-//         # Number of blocks to use.  This will be overridden to 1 if everything fits.
-//         size_t block_count
-
-//         # n-gram count thresholds for pruning. 0 values means no pruning for corresponding n-gram order
-//         vector[uint64_t] prune_thresholds;  # mjd
-//         bool prune_vocab
-//         string prune_vocab_file
-
-//         # Renumber the vocabulary the way the trie likes it?
-//         bool renumber_vocabulary
-
-//         # What to do with discount failures.
-//         DiscountConfig discount
-
-//         # Compute collapsed q values instead of probability and backoff
-//         bool output_q
-
-//         # * Computing the perplexity of LMs with different vocabularies is hard.  For
-//         # * example, the lowest perplexity is attained by a unigram model that
-//         # * predicts p(<unk>) = 1 and has no other vocabulary.  Also, linearly
-//         # * interpolated models will sum to more than 1 because <unk> is duplicated
-//         # * (SRI just pretends p(<unk>) = 0 for these purposes, which makes it sum to
-//         # * 1 but comes with its own problems).  This option will make the vocabulary
-//         # * a particular size by replicating <unk> multiple times for purposes of
-//         # * computing vocabulary size.  It has no effect if the actual vocabulary is
-//         # * larger.  This parameter serves the same purpose as IRSTLM's "dub".
-
-//         uint64_t vocab_size_for_unk
-
-//         # What to do the first time <s>, </s>, or <unk> appears in the input. If this is
-//         # anything but THROW_UP, then the symbol will always be treated as whitespace.
-//         constant.WarningAction disallowed_symbol_action
-
-//         const string & TempPrefix() const
-
-//         size_t TotalMemory() const
-
-//     cdef void Pipeline(PipelineConfig & config, int text_file, Output & output) except +
+#[derive(Debug, Clone)]
+pub struct DiscountConfig {
+    // Overrides discounts for orders [1,discount_override.size()].
+    overwrite: Vec<Discount,
+    // If discounting fails for an order, copy them from here.
+    fallback: Discount,
+    //  What to do when discounts are out of range or would trigger divison by
+    //  zero. It does something other than THROW_UP, use fallback_discount.
+    bad_action: WarningAction
+}
 
 
-// cdef extern from "lm/builder/lmplz_main.cc" namespace "lm::builder":
-//     cdef Discount ParseDiscountFallback(const vector[string] & param) except +
+#[derive(Debug, Default)]
+pub struct PipelineConfig {
+    order: i8,
+    sort: SortConfig,
+    initial_probs: InitialProbabilitiesConfig,
+    read_backoffs: ChainConfig,
 
-//     cdef vector[uint64_t] ParsePruning(const vector[string] & param, size_t order) except +
+    // Estimated vocabulary size.  Used for sizing CorpusCount memory and initial probing hash table sizing, also in CorpusCount.
+    vocab_estimate: WordIndex,
 
+    // Minimum block size to tolerate.
+    minimum_block: i8,
 
-// cdef extern from "lm/builder/initial_probabilities.hh" namespace "lm::builder":
-//     cdef struct InitialProbabilitiesConfig:
-//         # These should be small buffers to keep the adder from getting too far ahead
-//         ChainConfig adder_in
-//         ChainConfig adder_out
-//         # SRILM doesn't normally interpolate unigrams.
-//         bool interpolate_unigrams
+    // Number of blocks to use.  This will be overridden to 1 if everything fits.
+    block_count: i8,
 
+    // n-gram count thresholds for pruning. 0 values means no pruning for corresponding n-gram order
+    prune_thresholds: Vec<i64>,  // mjd
+    prune_vocab: bool,
+    prune_vocab_file: &str,
+
+    // Renumber the vocabulary the way the trie likes it?
+    renumber_vocabulary: bool,
+
+    // What to do with discount failures.
+    discount: DiscountConfig,
+
+    // Compute collapsed q values instead of probability and backoff
+    output_q: bool
+
+    // * Computing the perplexity of LMs with different vocabularies is hard.  For
+    // * example, the lowest perplexity is attained by a unigram model that
+    // * predicts p(<unk>) = 1 and has no other vocabulary.  Also, linearly
+    // * interpolated models will sum to more than 1 because <unk> is duplicated
+    // * (SRI just pretends p(<unk>) = 0 for these purposes, which makes it sum to
+    // * 1 but comes with its own problems).  This option will make the vocabulary
+    // * a particular size by replicating <unk> multiple times for purposes of
+    // * computing vocabulary size.  It has no effect if the actual vocabulary is
+    // * larger.  This parameter serves the same purpose as IRSTLM's "dub".
+
+    vocab_size_for_unk: u64,
+
+    // What to do the first time <s>, </s>, or <unk> appears in the input. If this is
+    // anything but THROW_UP, then the symbol will always be treated as whitespace.
+    disallowed_symbol_action: WarningAction,
+
+}
+
+impl PipelineConfig {
+    fn new() -> Self;
+    fn TempPrefix(self) -> &str;
+    fn TotalMemory() -> i8;
+}
+
+pub fn Pipeline(config: &PipelineConfig, text_file: i64, output: &Output);
+
+pub fn ParseDiscountFallback(param: &Vec<String>) -> Discount;
+
+pub fn ParsePruning(param: &Vec<String>, order: i8) -> Vec<u64>;

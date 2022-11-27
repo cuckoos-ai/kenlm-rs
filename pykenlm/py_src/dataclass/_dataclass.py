@@ -237,14 +237,14 @@ class LMPZParser(Coqpit):
         metadata=dict(
             help="Write ngrams to intermediate files. Turns off ARPA output (which can be reactivated by --arpa "
                  "file). Forces --renumber on."
-            )
+        )
     )
     renumber: bool = field(
         default=False,
         metadata=dict(
             help="Renumber the vocabulary identifiers so that they are monotone with the hash of each string. "
                  "This is consistent with the ordering used by the trie data structure."
-            )
+        )
     )
     collapse_values: bool = field(
         default=False,
@@ -252,7 +252,7 @@ class LMPZParser(Coqpit):
             help="Collapse probability and backoff into a single value, q that yields the same "
                  "sentence-level probabilities. See http://kheafield.com/professional/edinburgh/rest_paper.pdf "
                  "for more details, including a proof."
-            )
+        )
     )
     interpolate_unigrams: bool = field(
         default=True,
@@ -260,7 +260,7 @@ class LMPZParser(Coqpit):
             help="Interpolate the unigrams (default) as opposed to giving lots of mass to <unk> like SRI. "
                  "If you want SRI's behavior with a large <unk> and the old lmplz default, "
                  "use --interpolate_unigrams 0."
-            )
+        )
     )
     skip_symbols: bool = field(
         default=False,
@@ -288,14 +288,14 @@ class LMPZParser(Coqpit):
         metadata=dict(
             help="Assume this vocabulary size for purposes of calculating memory in step 1 (corpus count) "
                  "and pre-sizing the hash table"
-            )
+        )
     )
     vocab_pad: int = field(
         default=0,
         metadata=dict(
             help="If the vocabulary is smaller than this value, pad with <unk> to reach this size. "
                  "Requires --interpolate_unigrams"
-            )
+        )
     )
     verbose_header: bool = field(
         default=False,

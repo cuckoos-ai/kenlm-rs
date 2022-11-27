@@ -1,379 +1,452 @@
-// # namespace "lm::ngram"
+use crate::constant::{ARPALoadComplain, RestFunction, WarningAction, WriteMethod};
+use crate::kenlm::{EnumerateVocab, FullScoreReturn, StringPiece, WordIndex};
+use std::cell::RefCell;
+use std::fmt::{Debug, Display};
+use std::fs::{File, FileType};
+use std::io::prelude::*;
+use std::io::{BufRead, BufReader};
 
-// cimport kenlm
-// cimport util
-// cimport ngram
-// cimport constant
-// cimport numpy as np
-// from libcpp cimport bool
-// from libcpp.string cimport string
-// from libcpp.vector cimport vector
-// from libc.stdint cimport uint8_t, uintptr_t, uint64_t
-// ctypedef uintptr_t size_t
+type Node = NodeRange;
 
+#[derive(Debug, Clone, Copy)]
+pub struct State;
 
-// cdef extern from "lm/state.hh" namespace "lm::ngram":
-//     cdef cppclass State:
-//         int Compare(const State & other) const
+#[derive(Debug, Clone, Copy)]
+pub struct LoadMethod;
 
-//     int hash_value(const State & state) except +
+#[derive(Debug, Clone, Copy)]
+pub struct Config {
+    probing_multiplier: f64,
 
+    load_method: LoadMethod,
 
-// cdef extern from "lm/config.hh" namespace "lm::ngram":
-
-//     cdef struct Config:
-//         # Config()
-//         float probing_multiplier
-//         util.LoadMethod load_method
-//         bool show_progress
-//         # Level of complaining to do when loading from ARPA instead of binary format.
-//         constant.ARPALoadComplain arpa_complain
-
-//         # Where to log messages including the progress bar.  Set to NULL for silence.
-//         util.ostream *messages
-
-//         util.ostream *ProgressMessages() const
-
-//         # This will be called with every string in the vocabulary by the constructor; it need
-//         # only exist for the lifetime of the constructor. See enumerate_vocab.hh for more detail.
-//         # Config does not take ownership; just delete/let it go out of scope after the constructor exits.
-//         kenlm.EnumerateVocab *enumerate_vocab
+    show_progress: bool,
 
-//         # ONLY EFFECTIVE WHEN READING ARPA
-//         # What to do when <unk> isn't in the provided model.
-//         constant.WarningAction unknown_missing
-//         # What to do when <s> or </s> is missing from the model.
-//         # If THROW_UP, the exception will be of type util::SpecialWordMissingException.
-//         constant.WarningAction sentence_marker_missing
-
-//         # What to do with a positive log probability. For COMPLAIN and SILENT, map to 0.
-//         constant.WarningAction positive_log_probability
-
-//         # The probability to substitute for <unk> if it's missing from the model.
-//         # No effect if the model has <unk> or unknown_missing == THROW_UP.
-//         float unknown_missing_logprob
+    // Level of complaining to do when loading from ARPA instead of binary format.
+    arpa_complain: ARPALoadComplain,
 
-//         # Size multiplier for probing hash table. Must be > 1. Space is linear in
-//         # this. Time is probing_multiplier / (probing_multiplier - 1). No effect for sorted variant.
-//         # If you find yourself setting this to a low number, consider using the TrieModel which has lower memory consumption.
-//         float probing_multiplier
+    // Where to log messages including the progress bar.  Set to NULL for silence.
+    // messages: ostream,
 
-//         #  Amount of memory to use for building.  The actual memory usage will be higher since this
-//         # just sets sort buffer size.  Only applies to trie models.
-//         size_t building_memory
+    // This will be called with every string in the vocabulary by the constructor; it need
+    // only exist for the lifetime of the constructor. See enumerate_vocab.hh for more detail.
+    // Config does not take ownership; just delete/let it go out of scope after the constructor exits.
+    enumerate_vocab: EnumerateVocab,
 
-//         # Template for temporary directory appropriate for passing to mkdtemp.
-//         # The characters XXXXXX are appended before passing to mkdtemp. Only applies to trie.
-//         # If empty, defaults to write_mmap. If that's NULL, defaults to input file name.
-//         string temporary_directory_prefix
+    // ONLY EFFECTIVE WHEN READING ARPA
+    // What to do when <unk> isn't in the provided model.
+    unknown_missing: WarningAction,
+    // What to do when <s> or </s> is missing from the model.
+    // If THROW_UP, the exception will be of type util::SpecialWordMissingException.
+    sentence_marker_missing: WarningAction,
 
-//         #  While loading an ARPA file, also write out this binary format file. Set to NULL to disable.
-//         const char *write_mmap
+    // What to do with a positive log probability. For COMPLAIN and SILENT, map to 0.
+    positive_log_probability: WarningAction,
 
-//         constant.WriteMethod write_method
+    // The probability to substitute for <unk> if it's missing from the model.
+    // No effect if the model has <unk> or unknown_missing == THROW_UP.
+    unknown_missing_logprob: f64,
 
-//         # Include the vocab in the binary file?  Only effective if write_mmap != NULL.
-//         bool include_vocab
+    // Size multiplier for probing hash table. Must be > 1. Space is linear in
+    // this. Time is probing_multiplier / (probing_multiplier - 1). No effect for sorted variant.
+    // If you find yourself setting this to a low number, consider using the TrieModel which has lower memory consumption.
+    probing_multiplier: f64,
 
-//         constant.RestFunction rest_function  # Only used for REST_LOWER.
+    //  Amount of memory to use for building.  The actual memory usage will be higher since this
+    // just sets sort buffer size.  Only applies to trie models.
+    building_memory: i64,
 
-//         vector[string] rest_lower_files
+    // Template for temporary directory appropriate for passing to mkdtemp.
+    // The characters XXXXXX are appended before passing to mkdtemp. Only applies to trie.
+    // If empty, defaults to write_mmap. If that's NULL, defaults to input file name.
+    temporary_directory_prefix: String,
 
-//         # Quantization options.  Only effective for QuantTrieModel.  One value is
-//         # reserved for each of prob and backoff, so 2^bits - 1 buckets will be used
-//         # to quantize (and one of the remaining backoffs will be 0).
-//         uint8_t prob_bits
-//         uint8_t backoff_bits
+    //  While loading an ARPA file, also write out this binary format file. Set to NULL to disable.
+    write_mmap: &str,
 
-//         # Bhiksha compression (simple form).  Only works with trie.
-//         uint8_t pointer_bhiksha_bits
+    write_method: WriteMethod,
 
+    // Include the vocab in the binary file?  Only effective if write_mmap != NULL.
+    include_vocab: bool,
 
-// cdef extern from "lm/model.hh" namespace "lm::ngram":
-//     cdef Model *LoadVirtual(char *, Config & config) except +
-//     #default constructor
-//     cdef Model *LoadVirtual(char *) except +
+    rest_function: RestFunction, // Only used for REST_LOWER.
 
-//     cdef cppclass GenericModel[Search, VocabularyT]:
-//         # This is the model type returned by RecognizeBinary.
-//         const ModelType kModelType
+    rest_lower_files: Vec<String>,
 
-//         const unsigned int kVersion = Search.kVersion
-//         GenericModel(const char *file, const Config & init_config) except +
+    // Quantization options.  Only effective for QuantTrieModel.  One value is
+    // reserved for each of prob and backoff, so 2^bits - 1 buckets will be used
+    // to quantize (and one of the remaining backoffs will be 0).
+    prob_bits: u8,
+    backoff_bits: u8,
 
-//         # Get the size of memory that will be mapped given ngram counts. This
-//         # does not includes small non-mapped control structures, such as this class itself.
-//         @staticmethod
-//         uint64_t Size(const vector[uint64_t] & counts, const Config & config = Config()) except +
+    // Bhiksha compression (simple form).  Only works with trie.
+    pointer_bhiksha_bits: u8,
+}
 
-//         # Get the state for a context. Don't use this if you can avoid it. Use
-//         # BeginSentenceState or NullContextState and extend from those. If
-//         # you're only going to use this state to call FullScore once, use FullScoreForgotState.
-//         # To use this function, make an array of WordIndex containing the context
-//         # vocabulary ids in reverse order.  Then, pass the bounds of the array:
-//         # [context_rbegin, context_rend).
-//         void GetState(const kenlm.WordIndex *context_rbegin, const kenlm.WordIndex *context_rend, State & out_state) except +
+#[derive(Debug)]
+pub(crate) struct NodeRange {
+    begin: u64,
+    end: u64,
+}
 
-//         # Score p(new_word | in_state) and incorporate new_word into out_state.
-//         # Note that in_state and out_state must be different references:
-//         # &in_state != &out_state.
-//         kenlm.FullScoreReturn FullScore(
-//             const State & in_state,
-//             const kenlm.WordIndex new_word,
-//             State & out_state) except +
+#[derive(Debug)]
+pub struct UnigramPointer;
 
-//         # Slower call without in_state. Try to remember state, but sometimes it
-//         # would cost too much memory or your decoder isn't setup properly.
-//         # To use this function, make an array of WordIndex containing the context
-//         # vocabulary ids in reverse order.  Then, pass the bounds of the array:
-//         # [context_rbegin, context_rend).  The new_word is not part of the context
-//         # array unless you intend to repeat words.
-//         kenlm.FullScoreReturn FullScoreForgotState(
-//             const kenlm.WordIndex *context_rbegin, const kenlm.WordIndex *context_rend,
-//             const kenlm.WordIndex new_word, State & out_state) except +
+#[derive(Debug)]
+pub struct Unigram;
 
+#[derive(Debug)]
+pub struct BitPacked;
 
+#[derive(Debug)]
+pub struct BitPackedMiddle<Bhiksha>;
 
-// cdef extern from "lm/quantize.hh" namespace "lm::ngram":
+#[derive(Debug)]
+pub(crate) struct BitPackedLongest;
 
-//     cdef cppclass MiddlePointer:
-//         bool Found() except +
-//         float Prob() except +
-//         float Backoff() except +
-//         float Rest() except +
-//         void Write(float prob, float backoff) except +
+#[derive(Debug)]
+pub(crate) struct BhikshaBase;
 
-//     cppclass LongestPointer:
-//         pass
+#[derive(Debug)]
+pub(crate) struct SortedVocabulary;
 
-//     cdef cppclass BinaryFormat:
-//         pass
+#[derive(Debug)]
+pub struct ProbingVocabulary;
 
-//     cdef cppclass DontQuantize:
-//         DontQuantize() except +
+trait Bhiksha {
+    pub fn new(self, max_offset: u64, max_value: u64, config: &Config) -> Self {}
+}
 
-//         @staticmethod
-//         void UpdateConfigFromBinary(const BinaryFormat &, uint64_t, Config &) except +
+#[derive(Debug)]
+pub(crate) struct ArrayBhiksha {
+    kModelTypeAdd: ModelType,
+}
 
-//         @staticmethod
-//         uint64_t Size(uint8_t, const Config &) except +
+#[derive(Debug)]
+pub(crate) struct DontBhiksha {
+    kModelTypeAdd: ModelType,
+}
 
-//         @staticmethod
-//         uint8_t MiddleBits(const Config &) except +
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct GenericModel<Search, VocabularyT> {
+    // This is the model type returned by RecognizeBinary.
+    kModelType: ModelType,
+    kVersion: i64,
+}
 
-//         @staticmethod
-//         uint8_t LongestBits(const Config &) except +
+#[derive(Debug)]
+pub struct LongestPointer;
 
-//         void SetupMemory(void *, unsigned char, const Config &) except +
+#[derive(Debug)]
+pub struct BinaryFormat;
 
-//         void Train(uint8_t, vector[float] &, vector[float] &) except +
+#[derive(Debug)]
+pub(crate) struct DontQuantize;
 
-//         void TrainProb(uint8_t, vector[float] &) except +
+#[derive(Debug)]
+pub(crate) struct Bins;
 
-//         void FinishedLoading(const Config &) except +
+#[derive(Debug)]
+pub struct MiddlePointer;
 
-//     cdef cppclass Bins:
-//         pass
+#[derive(Debug)]
+pub(crate) struct SeparatelyQuantize;
 
-//     cdef cppclass SeparatelyQuantize:
+#[derive(Debug)]
+pub(crate) struct QueryPrinter;
 
-//         SeparatelyQuantize() except +
+trait Value {
+    fn new() -> Self;
+}
 
-//         void UpdateConfigFromBinary(const BinaryFormat &, uint64_t, Config &) except +
+#[derive(Debug)]
+pub struct RestValue;
 
-//         @staticmethod
-//         uint64_t Size(uint8_t, const Config &) except +
+#[derive(Debug)]
+pub struct BackoffValue;
 
-//         @staticmethod
-//         uint8_t MiddleBits(const Config &) except +
+#[derive(Debug)]
+pub struct HashedSearch<Value>;
 
-//         @staticmethod
-//         uint8_t LongestBits(const Config &) except +
+#[derive(Debug, Clone, Copy)]
+pub struct TrieSearch<Quant, Bhiksha>;
 
-//         void SetupMemory(void *, unsigned char, const Config &) except +
+trait Search {
+    pub fn new() -> Self {}
+}
 
-//         # Assumes 0.0 is removed from backoff.
-//         void Train(uint8_t order, vector[float] & prob, vector[float] & backoff) except +
-//         # Train just probabilities (for longest order).
-//         void TrainProb(uint8_t order, vector[float] & prob) except +
+impl BhikshaBase {
+    fn UpdateConfigFromBinary(self, file: &BinaryFormat, offset: u64, config: &Config);
+
+    fn Size(self, max_offset: u64, max_next: u64, config: &Config) -> u64;
+
+    fn InlineBits(self, max_offset: u64, max_next: u64, config: &Config) -> u8;
+
+    fn ReadNext(self, base: RefCell, bit_offset: u64, index: u64, total_bits: u8, out: &NodeRange);
+}
+
+impl Bhiksha for ArrayBhiksha {}
+
+impl Bhiksha for DontBhiksha {}
+
+impl Value for RestValue {
+    fn new() -> Self {
+        todo!()
+    }
+}
+
+impl Value for BackoffValue {
+    fn new() -> Self {
+        todo!()
+    }
+}
+
+impl Search for TrieSearch<Quant, Bhiksha> {
+    fn new() -> Self {}
+
+    fn UpdateConfigFromBinary(
+        self,
+        file: &BinaryFormat,
+        counts: &Vec<u64>,
+        offset: u64,
+        config: &Config,
+    );
+
+    fn Size(self, counts: &Vec<u64>, config: &Config) -> u64;
+
+    fn SetupMemory(self, start: u8, counts: &Vec<u64>, config: &Config) -> &u8;
+
+    fn InitializeFromARPA(
+        self,
+        file: &str,
+        f: &FilePiece,
+        counts: &Vec<u64>,
+        config: &Config,
+        vocab: &SortedVocabulary,
+        backing: &BinaryFormat,
+    );
 
-//         void FinishedLoading(const Config & config) except +
-
-//         const Bins *GetTables(unsigned char order_minus_2) except +
-
-//         Bins & LongestTable() except +
-
-
-// cdef extern from "lm/binary_format.cc" namespace "lm::ngram":
-//     cdef bool RecognizeBinary(const char *file, ModelType & recognized)
-//     cdef const char *kModelNames[6]
-
-
-// cdef extern from "lm/ngram_query.hh" namespace "lm::ngram":
-
-//     cdef cppclass QueryPrinter:
-//         QueryPrinter(int fd, bool print_word, bool print_line, bool print_summary, bool flush)
-
-//         void Word(util.StringPiece surface, kenlm.WordIndex vocab, const kenlm.FullScoreReturn & ret) except +
-
-//         void Line(uint64_t oov, float total) except +
-
-//         void Summary(double ppl_including_oov, double ppl_excluding_oov, uint64_t corpus_oov,
-//                      uint64_t corpus_tokens) except +
-
-//     cdef void Query[Model](const char *file, const Config & config, bool sentence_context,
-//                            QueryPrinter & printer) except +
-
-//     cdef void Query[Model, Printer](const Model & model, bool sentence_context, Printer & printer) except +
-
-
-// cdef extern from "lm/model_type.hh" namespace "lm::ngram":
-//     ctypedef enum ModelType:
-//         PROBING = 0
-//         REST_PROBING = 1
-//         TRIE = 2
-//         QUANT_TRIE = 3
-//         ARRAY_TRIE = 4
-//         QUANT_ARRAY_TRIE = 5
-
-// cdef extern from "lm/build_binary_main.cc" namespace "lm::ngram":
-//     ctypedef unsigned long int ulong
-
-//     cdef uint8_t ParseBitCount(const char *) except +
-//     cdef float ParseFloat(const char *) except +
-//     cdef np.npy_ulong ParseUInt(const char *) except +
-//     cdef void ParseFileList(const char *, vector[string] & to) except +
-
-
-// cdef extern from "lm/value.hh" namespace "lm::ngram":
-//     ctypedef struct RestValue:
-//         pass
-
-//     ctypedef struct BackoffValue:
-//         pass
-
-// cdef extern from "lm/search_hashed.hh" namespace "lm::ngram::detail":
-//     cdef cppclass HashedSearch[Value]:
-
-//         @staticmethod
-//         void UpdateConfigFromBinary(const BinaryFormat &, const vector[uint64_t] &, uint64_t, Config &) except +
-
-//         @staticmethod
-//         uint64_t Size(const vector[uint64_t] & counts, const Config & config) except +
-
-//         uint8_t *SetupMemory(uint8_t *start, const vector[uint64_t] & counts, const Config & config) except +
-
-//         void InitializeFromARPA(
-//             const char *file, util.FilePiece & f, vector[uint64_t] & counts, const Config & config,
-//             SortedVocabulary & vocab, BinaryFormat & backing) except +
-
-//         unsigned char Order() except +
-
-//         kenlm.ProbBackoff & UnknownUnigram() except +
-
-//         UnigramPointer LookupUnigram(kenlm.WordIndex word, Node &node, bool &independent_left,
-//                                      uint64_t &extend_left) except +
-
-//         MiddlePointer Unpack(uint64_t extend_pointer, unsigned char extend_length, Node & node) except +
-
-//         MiddlePointer LookupMiddle(
-//             unsigned char order_minus_2, kenlm.WordIndex word, Node & node,
-//             bool & independent_left, uint64_t & extend_left) except +
-
-//         LongestPointer LookupLongest(kenlm.WordIndex word, const Node & node) except +
-//         bool FastMakeNode(const kenlm.WordIndex *begin, const kenlm.WordIndex *end, Node & node) except +
-
-
-// cdef extern  from "lm/vocab.hh" namespace "lm::ngram":
-//     cdef cppclass SortedVocabulary:
-//         SortedVocabulary() except +
-//         kenlm.WordIndex Index(const util.StringPiece & str_) except +
-
-//     cdef cppclass ProbingVocabulary:
-//         ProbingVocabulary() except +
-//         kenlm.WordIndex Index(const util.StringPiece & str_) except +
-
-
-// cdef extern from "lm/trie.hh" namespace "lm::ngram::trie":
-//     cdef struct NodeRange:
-//         uint64_t begin, end
-
-//     cdef cppclass UnigramPointer:
-//         pass
-
-//     cdef cppclass Unigram:
-//         pass
-
-//     cdef cppclass BitPacked:
-//         pass
-
-//     cdef cppclass BitPackedMiddle[Bhiksha]:
-//         pass
-
-//     cdef cppclass BitPackedLongest:
-//         pass
-
-// cdef extern from "lm/bhiksha.hh" namespace "lm::ngram::trie":
-//     cdef class BhikshaBase:
-//         @staticmethod
-//         cdef void UpdateConfigFromBinary(BinaryFormat &file, uint64_t offset, Config &config):
-//             pass
-
-//         @staticmethod
-//         cdef uint64_t Size(uint64_t max_offset, uint64_t max_next, const Config &config):
-//             pass
-
-//         @staticmethod
-//         cdef uint8_t InlineBits(uint64_t max_offset, uint64_t max_next, const Config &config):
-//             pass
-
-//         cdef void ReadNext(self, void *base, uint64_t bit_offset, uint64_t index, uint8_t total_bits, NodeRange &out):
-//             pass
-
-//     cdef cppclass ArrayBhiksha(BhikshaBase):
-//         @staticmethod
-//         const ModelType kModelTypeAdd = kArrayAdd
-//         ArrayBhiksha(void *base, uint64_t max_offset, uint64_t max_value, const Config &config)
-
-//     cdef cppclass DontBhiksha(BhikshaBase):
-//         @staticmethod
-//         const ModelType kModelTypeAdd = kArrayAdd
-
-//         DontBhiksha(const void *base, uint64_t max_offset, uint64_t max_next, const Config &config)
-
-
-// cdef extern from "lm/search_trie.hh" namespace "lm::ngram::trie":
-
-//     ctypedef NodeRange Node
-//     cdef cppclass TrieSearch[Quant, Bhiksha]:
-
-//         @staticmethod
-//         void UpdateConfigFromBinary(const BinaryFormat & file, const vector[uint64_t] & counts,
-//                                     uint64_t offset, Config & config) except +
-
-//         @staticmethod
-//         uint64_t Size(const vector[uint64_t] & counts, const Config & config) except +
-
-//         uint8_t *SetupMemory(uint8_t *start, const vector[uint64_t] & counts, const Config & config) except +
-
-//         void InitializeFromARPA(
-//             const char *file, util.FilePiece & f, vector[uint64_t] & counts,
-//             const Config & config, SortedVocabulary & vocab, BinaryFormat & backing) except +
-
-//         UnigramPointer LookupUnigram(kenlm.WordIndex word, Node &node, bool &independent_left,
-//                                      uint64_t &extend_left) except +
-
-//         kenlm.ProbBackoff & UnknownUnigram() except +
-
-//         MiddlePointer Unpack(uint64_t extend_pointer, unsigned char extend_length, Node & node) except +
-
-//         MiddlePointer LookupMiddle(
-// 			unsigned char order_minus_2, kenlm.WordIndex word, Node & node,
-// 	        bool & independent_left, uint64_t & extend_left) except +
-
-//     LongestPointer LookupLongest(kenlm.WordIndex word, const Node & node) except +
-//     bool FastMakeNode(const kenlm.WordIndex *begin, const kenlm.WordIndex *end, Node & node) except +
-
-
-// cdef extern from "lm/sizes.cc" namespace "lm::ngram" nogil:
-//     cdef void ShowSizes(const char *file, const Config & config) except +
+    fn LookupUnigram(
+        self,
+        word: WordIndex,
+        node: &Node,
+        independent_left: &bool,
+        extend_left: &u64,
+    ) -> UnigramPointer;
+
+    fn UnknownUnigram(self) -> ProbBackoff;
+
+    fn Unpack(self, extend_pointer: u64, extend_length: &str, node: &Node) -> MiddlePointer;
+
+    fn LookupMiddle(
+        self,
+        order_minus_2: &str,
+        word: WordIndex,
+        node: &Node,
+        independent_left: &bool,
+        extend_left: &u64,
+    ) -> MiddlePointer;
+}
+
+impl Config {
+    // pub fn ProgressMessages() -> ostream;
+}
+
+impl State {
+    pub fn Compare(self, other: &State);
+}
+
+impl GenericModel<Search, VocabularyT> {
+    pub fn new(file: &str, init_config: &Config) -> Self;
+
+    // Get the size of memory that will be mapped given ngram counts. This
+    // does not includes small non-mapped control structures, such as this class itself.
+    fn Size(self, counts: &Vec<u64>, config: &Config) -> i64;
+
+    // Get the state for a context. Don't use this if you can avoid it. Use
+    // BeginSentenceState or NullContextState and extend from those. If
+    // you're only going to use this state to call FullScore once, use FullScoreForgotState.
+    // To use this function, make an array of WordIndex containing the context
+    // vocabulary ids in reverse order.  Then, pass the bounds of the array:
+    // [context_rbegin, context_rend).
+    pub fn GetState(self, context_rbegin: &WordIndex, context_rend: &WordIndex, out_state: &State);
+
+    // Score p(new_word | in_state) and incorporate new_word into out_state.
+    // Note that in_state and out_state must be different references:
+    // &in_state != &out_state.
+    pub fn FullScore(
+        self,
+        in_state: &State,
+        new_word: WordIndex,
+        out_state: &State,
+    ) -> FullScoreReturn;
+
+    // Slower call without in_state. Try to remember state, but sometimes it
+    // would cost too much memory or your decoder isn't setup properly.
+    // To use this function, make an array of WordIndex containing the context
+    // vocabulary ids in reverse order.  Then, pass the bounds of the array:
+    // [context_rbegin, context_rend).  The new_word is not part of the context
+    // array unless you intend to repeat words.
+    pub fn FullScoreForgotState(
+        self,
+        context_rbegin: &WordIndex,
+        context_rend: &WordIndex,
+        new_word: WordIndex,
+        out_state: &State,
+    ) -> FullScoreReturn;
+}
+
+impl MiddlePointer {
+    pub fn Found(self) -> bool;
+    pub fn Prob(self) -> f64;
+    pub fn Backoff(self) -> f64;
+    pub fn Rest(self) -> f64;
+    pub fn Write(self, prob: f64, backoff: f64);
+}
+
+trait Quant {
+    pub fn new() -> Self {}
+
+    pub fn UpdateConfigFromBinary(self, bin_format: &BinaryFormat, inp: u64, config: &Config);
+
+    pub fn Size(self, inp: u64, config: &Config) -> u64;
+
+    pub fn MiddleBits(self, config: &Config) -> u8;
+
+    pub fn LongestBits(self, config: &Config) -> u8;
+
+    pub fn SetupMemory(self, void: RefCell<i8>, inp_char: &str, config: &Config);
+
+    pub fn Train(self, inp: u8, &vector1: Vec<f64>, vector2: Vec<f64>);
+
+    pub fn TrainProb(self, inp: u8, &vector: Vec<f64>);
+
+    pub fn FinishedLoading(self, config: &Config);
+
+    pub fn GetTables(self, inp_char: &str, order_minus_2: i8) -> &Bins;
+
+    pub fn LongestTable(self) -> &Bins;
+}
+
+impl Quant for DontQuantize {
+    fn new() -> Self {
+        todo!()
+    }
+}
+
+impl Quant for SeparatelyQuantize {
+    fn new() -> Self {
+        todo!()
+    }
+}
+
+impl QueryPrinter {
+    pub fn new(
+        fd: i64,
+        print_word: bool,
+        print_line: bool,
+        print_summary: bool,
+        flush: bool,
+    ) -> Self;
+
+    pub fn Word(self, surface: StringPiece, vocab: WordIndex, ret: &FullScoreReturn);
+
+    pub fn Line(self, oov: u64, total: f64);
+
+    pub fn Summary(
+        self,
+        ppl_including_oov: f64,
+        ppl_excluding_oov: f64,
+        corpus_oov: u64,
+        corpus_tokens: u64,
+    );
+}
+
+impl Search for HashedSearch<Value> {
+    fn FastMakeNode(self, begin: WordIndex, end: WordIndex, node: &Node) -> bool;
+
+    fn InitializeFromARPA(
+        self,
+        file: &str,
+        f: &FilePiece,
+        counts: &Vec<u64>,
+        config: &Config,
+        vocab: &SortedVocabulary,
+        backing: &BinaryFormat,
+    );
+
+    fn LookupLongest(self, word: WordIndex, node: &Node) -> LongestPointer;
+
+    fn LookupMiddle(
+        self,
+        order_minus_2: &str,
+        word: WordIndex,
+        node: &Node,
+        independent_left: &bool,
+        extend_left: &str,
+    ) -> MiddlePointer;
+
+    fn LookupUnigram(
+        self,
+        word: WordIndex,
+        node: &Node,
+        independent_left: &bool,
+        extend_left: &u64,
+    ) -> UnigramPointer;
+
+    fn Order(self) -> &str;
+
+    fn SetupMemory(self, start: u8, counts: &Vec<u64>, config: &Config) -> u8;
+
+    fn Size(self, counts: &Vec<u64>, config: &Config) -> u64;
+
+    fn UnknownUnigram(self) -> &ProbBackoff;
+
+    fn Unpack(self, extend_pointer: u64, extend_length: &str, node: &Node) -> MiddlePointer;
+
+    fn UpdateConfigFromBinary(
+        self,
+        binary_format: &BinaryFormat,
+        vector: &Vec<u64>,
+        myint: uint64_t,
+        config: &Config,
+    );
+}
+
+trait VocabularyT {
+    fn new() -> Self {}
+
+    pub fn Index(self, inp_str: &StringPiece) -> WordIndex {}
+}
+
+impl VocabularyT for SortedVocabulary {
+    fn new() -> Self {
+        return SortedVocabulary();
+    }
+
+    fn Index(self, inp_str: &StringPiece) -> WordIndex {}
+}
+
+impl VocabularyT for ProbingVocabulary {
+    fn new() -> Self {
+        return ProbingVocabulary();
+    }
+
+    fn Index(self, inp_str: &StringPiece) -> WordIndex {}
+}
+
+pub fn Query<Model, Printer>(
+    file: &str,
+    config: &Config,
+    sentence_context: bool,
+    printer: &QueryPrinter,
+) {
+}
+
+pub fn RecognizeBinary(file: &str, recognized: &ModelType) -> bool {}
+
+pub fn LookupLongest(word: WordIndex, node: &Node) -> LongestPointer {}
+
+pub fn FastMakeNode(begin: WordIndex, end: WordIndex, node: &Node) -> bool {}
+
+pub fn ShowSizes(file: &str, config: &Config) {}

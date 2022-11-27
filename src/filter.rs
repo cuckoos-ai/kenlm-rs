@@ -1,47 +1,84 @@
-// cimport constant as ct
-// cimport util as c_util
-// cimport template as tp
-// from util import Py_FilePiece
+use crate::constant::{FilterMode, FormatEnum};
+use crate::kenlm::StringPiece;
+use crate::util::IStream;
+use std::collections::HashSet;
+use std::process::Output;
 
-// # ctypedef Format.Output FormatOutput
-// # ctypedef Format.Multiple FormatMultiple
+#[derive(Debug)]
+pub enum FilterType {
+    Threaded,
+    Context,
+    Binary,
+}
 
-// cdef struct Config:
-// 	size_t batch_size = 25000
-// 	size_t threads = boost.thread.hardware_concurrency()
-// 	FilterMode mode = MODE_COPY
-// 	bool phrase = False
-// 	bool context = False
-// 	FormatEnum format = FORMAT_ARPA
+#[derive(Debug, Default)]
+pub(crate) struct Config {
+    batch_size: i32, // 25000
+    threads: i8,
+    mode: FilterMode,   // MODE_COPY
+    phrase: bool,       // False
+    context: bool,      // False
+    format: FormatEnum, // FORMAT_ARPA
+}
 
-// cpdef class Py_FilterConfig:
-// 	cdef Config filter_cnf
-// 	cdef size_t batch_size = 25000
-// 	cdef size_t threads = None
-// 	cdef bool phrase = False
-// 	cdef bool context = False
-// 	cdef ct.FilterMode mode
-// 	cdef FormatEnum format = FORMAT_ARPA
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            batch_size: 25_000,
+            threads: 4,
+            mode: FilterMode::MODE_COPY,
+            phrase: false,
+            context: false,
+            format: FormatEnum::FORMAT_ARPA,
+        }
+    }
+}
 
-// ctypedef enum FilterMode:
-// 	MODE_COPY, MODE_SINGLE, MODE_MULTIPLE, MODE_UNION, MODE_UNSET
+pub(crate) fn RunThreadedFilter<FilterType, Format, OutputBuffer>(
+    config: &Config,
+    in_lm: &FilePiece,
+    filter_: &Filter,
+    output: Output,
+) {
+}
 
-// ctypedef enum FormatEnum:
-// 	FORMAT_ARPA, FORMAT_COUNT
+#[derive(Debug, Clone)]
+pub struct PhraseFilter;
 
-// cdef void RunThreadedFilter(
-// 	Config & config, c_util.FilePiece & in_lm, tp.Filter & filter_,
-// 	tp.Output & output, dtype=[Format, OutputBuffer])
+#[derive(Debug, Clone)]
+pub struct VocabFilter;
 
-// cdef void RunContextFilter(
-// 	Config & config, c_util.FilePiece & in_lm, tp.Filter filter_,
-// 	tp.Output & output, dtype=[Format, OutputBuffer])
+trait Filter {
+    fn new() -> Self;
+}
 
-// cdef void DispatchBinaryFilter(
-// 	Config & config, c_util.FilePiece & in_lm, const tp.Binary & binary,
-// 	tp.Output & out, dtype=[Format, Binary])
+impl Filter for PhraseFilter {}
 
-// cpdef void DispatchFilterModes(
-// 	Py_FilterConfig & config, c_util.istream & in_vocab,
-// 	Py_FilePiece & in_lm, const char *out_name, ct.Format format_type=None
-// )
+impl Filter for VocabFilter {}
+
+#[derive(Debug, Clone)]
+pub struct Substrings;
+
+#[derive(Debug, Clone)]
+pub struct Multiple;
+
+#[derive(Debug, Clone)]
+pub struct Union;
+
+impl Union {
+    fn new(self, vocabs: &Words) -> Self;
+}
+
+impl Multiple {
+    fn AddNGram(
+        self,
+        begin: &Iterator,
+        end: &Iterator,
+        ngram: &StringPiece,
+        line: &StringPiece,
+        output: &Output,
+    );
+}
+
+pub fn ReadSingle(in_: IStream, out: &HashSet<String>);
+pub fn ReadMultiple(in_: IStream, out_: Substrings) -> i64;

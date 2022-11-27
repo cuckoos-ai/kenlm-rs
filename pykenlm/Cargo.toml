@@ -2,7 +2,7 @@
 name = "pykenlm"
 version = "0.0.1"
 authors = ["Sandip Dey <sandip.dey1988@yahoo.com>"]
-edition = "2022"
+# edition = "2022"
 
 [lib]
 name = "kenlm-rs"
@@ -13,6 +13,6 @@ name = "kenlm-rs"
 # crate-type = ["cdylib", "rlib"]
 crate-type = ["cdylib"]
 
-[dependencies.kemlm]
-version = "*"
-path = ".."
+# [dependencies.kemlm]
+# version = "*"
+# path = ".."
