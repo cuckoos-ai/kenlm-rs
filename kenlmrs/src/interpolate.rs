@@ -1,4 +1,5 @@
 use crate::kenlm::{Error, ModelBuffer, Result, StringPiece};
+use crate::util::FixedArray;
 
 use core::option::Option;
 use serde::de::DeserializeOwned;

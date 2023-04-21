@@ -85,8 +85,8 @@ pub struct Controller<Filter, OutputBuffer, RealOutput>;
 
 #[derive(Debug)]
 pub struct BinaryFilter<Binary>;
-
 pub trait OutputBuffer {}
+
 #[derive(Debug, Clone, Copy)]
 pub struct BinaryOutputBuffer;
 
